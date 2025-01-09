@@ -1,0 +1,9 @@
+pandas
+pymupdf
+langchain
+langchain_community
+sentence-transformers
+faiss-cpu
+pytesseract
+pillow
+lxml
