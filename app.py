@@ -41,17 +41,31 @@ def process_pdf(file):
     return pdf_documents
 
 # Function to process Excel files
+# def process_excel(file):
+#     try:
+#         df = pd.read_excel(file)
+#         documents = [
+#             Document(page_content=" ".join(map(str, row.values)))
+#             for _, row in df.iterrows()
+#         ]
+#         return documents
+#     except Exception as e:
+#         st.error(f"Error processing Excel file: {e}")
+#         return []
 def process_excel(file):
     try:
+        import openpyxl  # Attempt to import openpyxl
         df = pd.read_excel(file)
         documents = [
             Document(page_content=" ".join(map(str, row.values)))
             for _, row in df.iterrows()
         ]
         return documents
+    except ImportError:
+        st.error("Missing optional dependency 'openpyxl'. Please install it using 'pip install openpyxl'.")
     except Exception as e:
         st.error(f"Error processing Excel file: {e}")
-        return []
+    return []
 
 # Function to process CSV files
 def process_csv(file):
