@@ -100,7 +100,7 @@ def generate_response(query, qa):
 
 # Main Streamlit app
 def main():
-    st.title("Enhanced RAG Chatbot for Unstructured Data")
+    st.title("Your Intelligent File Assistant")
     st.write("Upload PDFs, Excel, or CSV files to get fast and accurate insights.")
 
     # File upload
