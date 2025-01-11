@@ -11,8 +11,10 @@ from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain.embeddings import HuggingFaceEmbeddings
+from pdf2image import convert_from_bytes
+from pytesseract import pytesseract, Output
+from PIL import Image, ImageDraw
 import os
-from pytesseract import pytesseract  # For OCR (optional, if needed for diagrams)
 
 # Function to initialize the LLM
 def initialize_llm():
@@ -27,74 +29,66 @@ def initialize_llm():
         temperature=0.5
     )
 
-# Function to process PDF files with layout information
-def process_pdf_with_visual_clues(file):
-    pdf_documents = []
-    try:
-        with fitz.open(stream=file.read(), filetype="pdf") as pdf:
-            for page in pdf:
-                blocks = page.get_text("dict")["blocks"]
-                grouped_content = {}
-                for block in blocks:
-                    bbox = tuple(block["bbox"])  # Bounding box for position
-                    if "lines" in block:
-                        content = []
-                        for line in block["lines"]:
-                            line_text = " ".join([span["text"] for span in line["spans"]])
-                            content.append(line_text)
-                        grouped_content[bbox] = "\n".join(content)
-                # Sort blocks top-down for better alignment
-                sorted_content = sorted(grouped_content.items(), key=lambda x: x[0][1])
-                page_text = "\n\n".join([content for _, content in sorted_content])
-                pdf_documents.append(Document(page_content=page_text))
-    except Exception as e:
-        st.error(f"Error processing PDF: {e}")
-    return pdf_documents
+# Convert PDF pages to images
+def convert_pdf_to_images(pdf_file):
+    images = convert_from_bytes(pdf_file.read())
+    return images
 
+# Detect text and bounding boxes using OCR
+def detect_text_with_boxes(image):
+    data = pytesseract.image_to_data(image, output_type=Output.DICT)
+    boxes = []
+    for i in range(len(data["level"])):
+        (x, y, w, h) = (data["left"][i], data["top"][i], data["width"][i], data["height"][i])
+        text = data["text"][i].strip()
+        if text:
+            boxes.append({"text": text, "bbox": (x, y, w, h)})
+    return boxes
 
-# Function to extract tables from PDFs
-def extract_tables(file):
-    tables = []
+# Mark detected text boxes on the image
+def mark_text_boxes(image, boxes):
+    draw = ImageDraw.Draw(image)
+    for box in boxes:
+        (x, y, w, h) = box["bbox"]
+        draw.rectangle([x, y, x + w, y + h], outline="red", width=2)
+    return image
+
+# Align and group detected text logically
+def align_and_group_boxes(boxes):
+    sorted_boxes = sorted(boxes, key=lambda b: (b["bbox"][1], b["bbox"][0]))
+    grouped_data = []
+    for box in sorted_boxes:
+        grouped_data.append(box["text"])
+    return "\n".join(grouped_data)
+
+# Process PDF pages with images and OCR
+def process_pdf_page(pdf_file):
+    images = convert_pdf_to_images(pdf_file)
+    all_extracted_data = []
+
+    for image in images:
+        # Detect and mark text boxes
+        boxes = detect_text_with_boxes(image)
+        marked_image = mark_text_boxes(image.copy(), boxes)
+        marked_image.show()  # Optional: Display the image with bounding boxes
+
+        # Align and group text
+        text_data = align_and_group_boxes(boxes)
+        all_extracted_data.append(text_data)
+
+    # Extract structured tables using Camelot
     try:
-        temp_path = f"temp_{file.name}"  # Temporary save for camelot
+        temp_path = f"temp_{pdf_file.name}"  # Temporary save for camelot
         with open(temp_path, "wb") as f:
-            f.write(file.getbuffer())
-        extracted_tables = camelot.read_pdf(temp_path, pages="all", flavor="stream")
-        tables = [table.df for table in extracted_tables]
+            f.write(pdf_file.getbuffer())
+        tables = camelot.read_pdf(temp_path, pages="all", flavor="stream")
+        for table in tables:
+            all_extracted_data.append(table.df.to_string())
         os.remove(temp_path)  # Clean up temporary file
     except Exception as e:
-        st.error(f"Error extracting tables from PDF: {e}")
-    return tables
+        st.warning(f"Error processing tables: {e}")
 
-# Function to normalize text
-def normalize_text(text):
-    return " ".join(text.split())
-
-# Function to remove duplicates and align data
-def remove_duplicates_and_align(data):
-    seen = set()
-    aligned_data = []
-    for line in data.splitlines():
-        if line.strip() and line not in seen:
-            seen.add(line)
-            aligned_data.append(line.strip())
-    return "\n".join(aligned_data)
-def clean_and_deduplicate_response(response):
-    lines = response.split("\n")
-    unique_lines = []
-    seen = set()
-    for line in lines:
-        if line not in seen:
-            seen.add(line)
-            unique_lines.append(line)
-    return "\n".join(unique_lines)
-
-def clean_response(response):
-    # Remove placeholders
-    response = response.split("Best regards")[0]  # Remove metadata starting from "Best regards"
-    # Remove extra spaces and lines
-    cleaned_lines = [line.strip() for line in response.split("\n") if line.strip()]
-    return "\n".join(cleaned_lines)
+    return all_extracted_data
 
 # Function to process Excel files
 def process_excel(file):
@@ -124,35 +118,20 @@ def process_csv(file):
         return []
 
 # Function to handle all file types
-# def process_files(uploaded_files):
-#     all_documents = []
-#     for uploaded_file in uploaded_files:
-#         if uploaded_file.name.endswith(".pdf"):
-#             documents = process_pdf_with_layout(uploaded_file)
-#             tables = extract_tables(uploaded_file)
-#             all_documents.extend(documents)
-#             all_documents.extend([Document(page_content=table.to_string()) for table in tables])
-#         elif uploaded_file.name.endswith(".xlsx"):
-#             all_documents.extend(process_excel(uploaded_file))
-#         elif uploaded_file.name.endswith(".csv"):
-#             all_documents.extend(process_csv(uploaded_file))
-#         else:
-#             st.warning(f"Unsupported file type: {uploaded_file.name}")
-#     return all_documents
-
-
 def process_files(uploaded_files):
     all_documents = []
-    for uploaded_file in uploaded_files:
-        if uploaded_file.name.endswith(".pdf"):
-            documents = process_pdf_with_visual_clues(uploaded_file)
-            all_documents.extend(documents)
-        elif uploaded_file.name.endswith(".xlsx"):
-            all_documents.extend(process_excel(uploaded_file))
-        elif uploaded_file.name.endswith(".csv"):
-            all_documents.extend(process_csv(uploaded_file))
+
+    for file in uploaded_files:
+        if file.name.endswith(".pdf"):
+            extracted_data = process_pdf_page(file)
+            all_documents.extend([Document(page_content=data) for data in extracted_data])
+        elif file.name.endswith(".xlsx"):
+            all_documents.extend(process_excel(file))
+        elif file.name.endswith(".csv"):
+            all_documents.extend(process_csv(file))
         else:
-            st.warning(f"Unsupported file type: {uploaded_file.name}")
+            st.warning(f"Unsupported file type: {file.name}")
+
     return all_documents
 
 # Create vector store
@@ -164,6 +143,12 @@ def create_vector_store(documents):
         st.error(f"Error creating vector store: {e}")
         return None
 
+# Clean the LLM's response
+def clean_response(response):
+    response = response.split("Thank you!")[0]  # Remove verbose endings
+    cleaned_lines = [line.strip() for line in response.split("\n") if line.strip()]
+    return "\n".join(cleaned_lines)
+
 # Generate response
 def generate_response(query, qa):
     try:
@@ -173,7 +158,6 @@ def generate_response(query, qa):
     except Exception as e:
         st.error(f"Error generating response: {e}")
         return "Sorry, something went wrong."
-
 
 # Main Streamlit app
 def main():
@@ -200,19 +184,19 @@ def main():
 
         llm = initialize_llm()
 
-        # Define prompt for LLM
+        # Define prompt for structured and unstructured data
         prompt_template = """
-        You are an intelligent assistant extracting and organizing insights from structured and unstructured documents. 
-        When responding:
-        1. Retain the distinctions between schemes or sections as they appear in the document.
-        2. Avoid merging details from different schemes or sections.
-        3. Organize the information clearly, mirroring the structure in the source document.
-        4. Use only the provided data for answers. If the information is unavailable or unclear, respond with "I don't know."
-        
+        You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
+
+        When answering:
+        1. Provide a concise and factual summary of the relevant details.
+        2. Clearly distinguish between different schemes or sections, and avoid merging or repeating details.
+        3. Use bullet points or numbers for clarity.
+        4. Avoid unnecessary phrases like "I don't know about any other schemes" or "Thank you!"
+
         Context: {context}
         Question: {question}
         """
-
         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
         # Create RetrievalQA chain
