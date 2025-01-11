@@ -28,19 +28,25 @@ def initialize_llm():
     )
 
 # Function to process PDF files with layout information
-def process_pdf_with_layout(file):
+def process_pdf_with_visual_clues(file):
     pdf_documents = []
     try:
         with fitz.open(stream=file.read(), filetype="pdf") as pdf:
             for page in pdf:
                 blocks = page.get_text("dict")["blocks"]
-                page_content = []
+                grouped_content = {}
                 for block in blocks:
+                    bbox = tuple(block["bbox"])  # Get bounding box for block
                     if "lines" in block:
+                        content = []
                         for line in block["lines"]:
                             line_text = " ".join([span["text"] for span in line["spans"]])
-                            page_content.append(line_text)
-                pdf_documents.append(Document(page_content="\n".join(page_content)))
+                            content.append(line_text)
+                        grouped_content[bbox] = "\n".join(content)
+                # Sort content by vertical position to preserve structure
+                sorted_content = sorted(grouped_content.items(), key=lambda x: x[0][1])
+                page_text = "\n\n".join([content for _, content in sorted_content])
+                pdf_documents.append(Document(page_content=page_text))
     except Exception as e:
         st.error(f"Error processing PDF: {e}")
     return pdf_documents
@@ -72,6 +78,15 @@ def remove_duplicates_and_align(data):
             seen.add(line)
             aligned_data.append(line.strip())
     return "\n".join(aligned_data)
+def clean_and_deduplicate_response(response):
+    lines = response.split("\n")
+    unique_lines = []
+    seen = set()
+    for line in lines:
+        if line not in seen:
+            seen.add(line)
+            unique_lines.append(line)
+    return "\n".join(unique_lines)
 
 # Function to process Excel files
 def process_excel(file):
@@ -101,14 +116,29 @@ def process_csv(file):
         return []
 
 # Function to handle all file types
+# def process_files(uploaded_files):
+#     all_documents = []
+#     for uploaded_file in uploaded_files:
+#         if uploaded_file.name.endswith(".pdf"):
+#             documents = process_pdf_with_layout(uploaded_file)
+#             tables = extract_tables(uploaded_file)
+#             all_documents.extend(documents)
+#             all_documents.extend([Document(page_content=table.to_string()) for table in tables])
+#         elif uploaded_file.name.endswith(".xlsx"):
+#             all_documents.extend(process_excel(uploaded_file))
+#         elif uploaded_file.name.endswith(".csv"):
+#             all_documents.extend(process_csv(uploaded_file))
+#         else:
+#             st.warning(f"Unsupported file type: {uploaded_file.name}")
+#     return all_documents
+
+
 def process_files(uploaded_files):
     all_documents = []
     for uploaded_file in uploaded_files:
         if uploaded_file.name.endswith(".pdf"):
-            documents = process_pdf_with_layout(uploaded_file)
-            tables = extract_tables(uploaded_file)
+            documents = process_pdf_with_visual_clues(uploaded_file)
             all_documents.extend(documents)
-            all_documents.extend([Document(page_content=table.to_string()) for table in tables])
         elif uploaded_file.name.endswith(".xlsx"):
             all_documents.extend(process_excel(uploaded_file))
         elif uploaded_file.name.endswith(".csv"):
@@ -127,10 +157,12 @@ def create_vector_store(documents):
         return None
 
 # Generate response
+
 def generate_response(query, qa):
     try:
         result = qa({"query": query})
-        return result["result"]
+        cleaned_result = clean_and_deduplicate_response(result["result"])
+        return cleaned_result
     except Exception as e:
         st.error(f"Error generating response: {e}")
         return "Sorry, something went wrong."
@@ -162,16 +194,17 @@ def main():
 
         # Define prompt for LLM
         prompt_template = """
-        You are an intelligent assistant that extracts and organizes insights from structured and unstructured documents. 
+        You are an intelligent assistant extracting and organizing insights from structured and unstructured documents. 
         When responding:
-        1. Organize the information into a clear and logical structure (e.g., bullet points, tables).
-        2. Avoid repeating or overlapping details. Consolidate similar schemes or categories into distinct sections.
-        3. If the data appears unstructured (e.g., scattered, in boxes, or diagrams), interpret and align it logically based on context.
+        1. Retain the distinctions between schemes or sections as they appear in the document.
+        2. Avoid merging details from different schemes or sections.
+        3. Organize the information clearly, mirroring the structure in the source document.
         4. Use only the provided data for answers. If the information is unavailable or unclear, respond with "I don't know."
-
+        
         Context: {context}
         Question: {question}
         """
+
         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
         # Create RetrievalQA chain
