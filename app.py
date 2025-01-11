@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-import fitz  # PyMuPDF for PDF processing
-import camelot  # For table extraction from PDFs
+import pdfplumber  # For PDF text and table extraction
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain.prompts import PromptTemplate
@@ -11,9 +10,6 @@ from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain.embeddings import HuggingFaceEmbeddings
-from pdf2image import convert_from_bytes
-from pytesseract import pytesseract, Output
-from PIL import Image, ImageDraw
 import os
 
 # Function to initialize the LLM
@@ -29,66 +25,25 @@ def initialize_llm():
         temperature=0.5
     )
 
-# Convert PDF pages to images
-def convert_pdf_to_images(pdf_file):
-    images = convert_from_bytes(pdf_file.read())
-    return images
-
-# Detect text and bounding boxes using OCR
-def detect_text_with_boxes(image):
-    data = pytesseract.image_to_data(image, output_type=Output.DICT)
-    boxes = []
-    for i in range(len(data["level"])):
-        (x, y, w, h) = (data["left"][i], data["top"][i], data["width"][i], data["height"][i])
-        text = data["text"][i].strip()
-        if text:
-            boxes.append({"text": text, "bbox": (x, y, w, h)})
-    return boxes
-
-# Mark detected text boxes on the image
-def mark_text_boxes(image, boxes):
-    draw = ImageDraw.Draw(image)
-    for box in boxes:
-        (x, y, w, h) = box["bbox"]
-        draw.rectangle([x, y, x + w, y + h], outline="red", width=2)
-    return image
-
-# Align and group detected text logically
-def align_and_group_boxes(boxes):
-    sorted_boxes = sorted(boxes, key=lambda b: (b["bbox"][1], b["bbox"][0]))
-    grouped_data = []
-    for box in sorted_boxes:
-        grouped_data.append(box["text"])
-    return "\n".join(grouped_data)
-
-# Process PDF pages with images and OCR
-def process_pdf_page(pdf_file):
-    images = convert_pdf_to_images(pdf_file)
-    all_extracted_data = []
-
-    for image in images:
-        # Detect and mark text boxes
-        boxes = detect_text_with_boxes(image)
-        marked_image = mark_text_boxes(image.copy(), boxes)
-        marked_image.show()  # Optional: Display the image with bounding boxes
-
-        # Align and group text
-        text_data = align_and_group_boxes(boxes)
-        all_extracted_data.append(text_data)
-
-    # Extract structured tables using Camelot
+# Process PDF using pdfplumber
+def process_pdf_with_pdfplumber(pdf_file):
+    all_text = []
     try:
-        temp_path = f"temp_{pdf_file.name}"  # Temporary save for camelot
-        with open(temp_path, "wb") as f:
-            f.write(pdf_file.getbuffer())
-        tables = camelot.read_pdf(temp_path, pages="all", flavor="stream")
-        for table in tables:
-            all_extracted_data.append(table.df.to_string())
-        os.remove(temp_path)  # Clean up temporary file
-    except Exception as e:
-        st.warning(f"Error processing tables: {e}")
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                # Extract text
+                text = page.extract_text()
+                if text:
+                    all_text.append(Document(page_content=text))
 
-    return all_extracted_data
+                # Extract tables
+                tables = page.extract_tables()
+                for table in tables:
+                    table_text = "\n".join(["\t".join(row) for row in table if row])
+                    all_text.append(Document(page_content=table_text))
+    except Exception as e:
+        st.error(f"Error processing PDF: {e}")
+    return all_text
 
 # Function to process Excel files
 def process_excel(file):
@@ -123,8 +78,8 @@ def process_files(uploaded_files):
 
     for file in uploaded_files:
         if file.name.endswith(".pdf"):
-            extracted_data = process_pdf_page(file)
-            all_documents.extend([Document(page_content=data) for data in extracted_data])
+            extracted_data = process_pdf_with_pdfplumber(file)
+            all_documents.extend(extracted_data)
         elif file.name.endswith(".xlsx"):
             all_documents.extend(process_excel(file))
         elif file.name.endswith(".csv"):
