@@ -1,5 +1,6 @@
 pandas
 pymupdf
+pdfplumber
 langchain
 langchain_community
 sentence-transformers
