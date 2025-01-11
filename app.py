@@ -36,20 +36,21 @@ def process_pdf_with_visual_clues(file):
                 blocks = page.get_text("dict")["blocks"]
                 grouped_content = {}
                 for block in blocks:
-                    bbox = tuple(block["bbox"])  # Get bounding box for block
+                    bbox = tuple(block["bbox"])  # Bounding box for position
                     if "lines" in block:
                         content = []
                         for line in block["lines"]:
                             line_text = " ".join([span["text"] for span in line["spans"]])
                             content.append(line_text)
                         grouped_content[bbox] = "\n".join(content)
-                # Sort content by vertical position to preserve structure
+                # Sort blocks top-down for better alignment
                 sorted_content = sorted(grouped_content.items(), key=lambda x: x[0][1])
                 page_text = "\n\n".join([content for _, content in sorted_content])
                 pdf_documents.append(Document(page_content=page_text))
     except Exception as e:
         st.error(f"Error processing PDF: {e}")
     return pdf_documents
+
 
 # Function to extract tables from PDFs
 def extract_tables(file):
@@ -87,6 +88,13 @@ def clean_and_deduplicate_response(response):
             seen.add(line)
             unique_lines.append(line)
     return "\n".join(unique_lines)
+
+def clean_response(response):
+    # Remove placeholders
+    response = response.split("Best regards")[0]  # Remove metadata starting from "Best regards"
+    # Remove extra spaces and lines
+    cleaned_lines = [line.strip() for line in response.split("\n") if line.strip()]
+    return "\n".join(cleaned_lines)
 
 # Function to process Excel files
 def process_excel(file):
@@ -157,15 +165,15 @@ def create_vector_store(documents):
         return None
 
 # Generate response
-
 def generate_response(query, qa):
     try:
         result = qa({"query": query})
-        cleaned_result = clean_and_deduplicate_response(result["result"])
+        cleaned_result = clean_response(result["result"])
         return cleaned_result
     except Exception as e:
         st.error(f"Error generating response: {e}")
         return "Sorry, something went wrong."
+
 
 # Main Streamlit app
 def main():
