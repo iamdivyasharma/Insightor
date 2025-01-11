@@ -8,6 +8,9 @@ pytesseract
 pillow
 lxml
 openpyxl
-camelot-py
-python-poppler
+camelot-py[cv]
 pdf2image
+Pillow
+fitz  # PyMuPDF
+openpyxl
+
