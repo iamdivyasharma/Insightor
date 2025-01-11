@@ -27,18 +27,37 @@ def initialize_llm():
 
 # Function to process PDF files
 
+# def process_pdf(file):
+#     pdf_documents = []
+#     try:
+#         # Read the file content as bytes
+#         with fitz.open(stream=file.read(), filetype="pdf") as pdf:
+#             for page in pdf:
+#                 text = page.get_text("text")
+#                 if text.strip():  # Ignore empty pages
+#                     pdf_documents.append(Document(page_content=text))
+#     except Exception as e:
+#         st.error(f"Error processing PDF: {e}")
+#     return pdf_documents
+
 def process_pdf(file):
     pdf_documents = []
     try:
-        # Read the file content as bytes
         with fitz.open(stream=file.read(), filetype="pdf") as pdf:
             for page in pdf:
-                text = page.get_text("text")
-                if text.strip():  # Ignore empty pages
-                    pdf_documents.append(Document(page_content=text))
+                blocks = page.get_text("dict")["blocks"]
+                organized_text = []
+                for block in blocks:
+                    if "lines" in block:
+                        for line in block["lines"]:
+                            line_text = " ".join(span["text"] for span in line["spans"])
+                            organized_text.append(line_text)
+                if organized_text:
+                    pdf_documents.append(Document(page_content="\n".join(organized_text)))
     except Exception as e:
         st.error(f"Error processing PDF: {e}")
     return pdf_documents
+
 
 # Function to process Excel files
 # def process_excel(file):
@@ -143,13 +162,24 @@ def main():
         llm = initialize_llm()
 
         # Define prompt for LLM
-        prompt_template = """
-        You are an intelligent assistant providing insights from the given context.
-        Use only the provided data. If information is unavailable, reply with "I don't know."
+        # prompt_template = """
+        # You are an intelligent assistant providing insights from the given context.
+        # Use only the provided data. If information is unavailable, reply with "I don't know."
 
+        # Context: {context}
+        # Question: {question}
+        # """
+
+        prompt_template = """
+        You are an intelligent assistant that provides precise and contextually accurate insights based on the given data.
+        - If the data appears unstructured, such as text in circles, boxes, or misaligned formats, try to interpret and organize it logically before answering.
+        - Use only the provided context to generate answers. Avoid making assumptions or fabricating information.
+        - If the required information is unavailable or unclear, respond with "I don't know."
+        
         Context: {context}
         Question: {question}
         """
+
         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
         # Create RetrievalQA chain
