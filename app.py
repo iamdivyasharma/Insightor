@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import fitz  # PyMuPDF for PDF processing
+import camelot  # For table extraction from PDFs
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain.prompts import PromptTemplate
@@ -11,6 +12,7 @@ from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain.embeddings import HuggingFaceEmbeddings
 import os
+from pytesseract import pytesseract  # For OCR (optional, if needed for diagrams)
 
 # Function to initialize the LLM
 def initialize_llm():
@@ -25,66 +27,65 @@ def initialize_llm():
         temperature=0.5
     )
 
-# Function to process PDF files
-
-# def process_pdf(file):
-#     pdf_documents = []
-#     try:
-#         # Read the file content as bytes
-#         with fitz.open(stream=file.read(), filetype="pdf") as pdf:
-#             for page in pdf:
-#                 text = page.get_text("text")
-#                 if text.strip():  # Ignore empty pages
-#                     pdf_documents.append(Document(page_content=text))
-#     except Exception as e:
-#         st.error(f"Error processing PDF: {e}")
-#     return pdf_documents
-
-def process_pdf(file):
+# Function to process PDF files with layout information
+def process_pdf_with_layout(file):
     pdf_documents = []
     try:
         with fitz.open(stream=file.read(), filetype="pdf") as pdf:
             for page in pdf:
                 blocks = page.get_text("dict")["blocks"]
-                organized_text = []
+                page_content = []
                 for block in blocks:
                     if "lines" in block:
                         for line in block["lines"]:
-                            line_text = " ".join(span["text"] for span in line["spans"])
-                            organized_text.append(line_text)
-                if organized_text:
-                    pdf_documents.append(Document(page_content="\n".join(organized_text)))
+                            line_text = " ".join([span["text"] for span in line["spans"]])
+                            page_content.append(line_text)
+                pdf_documents.append(Document(page_content="\n".join(page_content)))
     except Exception as e:
         st.error(f"Error processing PDF: {e}")
     return pdf_documents
 
+# Function to extract tables from PDFs
+def extract_tables(file):
+    tables = []
+    try:
+        temp_path = f"temp_{file.name}"  # Temporary save for camelot
+        with open(temp_path, "wb") as f:
+            f.write(file.getbuffer())
+        extracted_tables = camelot.read_pdf(temp_path, pages="all", flavor="stream")
+        tables = [table.df for table in extracted_tables]
+        os.remove(temp_path)  # Clean up temporary file
+    except Exception as e:
+        st.error(f"Error extracting tables from PDF: {e}")
+    return tables
+
+# Function to normalize text
+def normalize_text(text):
+    return " ".join(text.split())
+
+# Function to remove duplicates and align data
+def remove_duplicates_and_align(data):
+    seen = set()
+    aligned_data = []
+    for line in data.splitlines():
+        if line.strip() and line not in seen:
+            seen.add(line)
+            aligned_data.append(line.strip())
+    return "\n".join(aligned_data)
 
 # Function to process Excel files
-# def process_excel(file):
-#     try:
-#         df = pd.read_excel(file)
-#         documents = [
-#             Document(page_content=" ".join(map(str, row.values)))
-#             for _, row in df.iterrows()
-#         ]
-#         return documents
-#     except Exception as e:
-#         st.error(f"Error processing Excel file: {e}")
-#         return []
 def process_excel(file):
     try:
-        import openpyxl  # Attempt to import openpyxl
+        import openpyxl
         df = pd.read_excel(file)
         documents = [
             Document(page_content=" ".join(map(str, row.values)))
             for _, row in df.iterrows()
         ]
         return documents
-    except ImportError:
-        st.error("Missing optional dependency 'openpyxl'. Please install it using 'pip install openpyxl'.")
     except Exception as e:
         st.error(f"Error processing Excel file: {e}")
-    return []
+        return []
 
 # Function to process CSV files
 def process_csv(file):
@@ -104,7 +105,10 @@ def process_files(uploaded_files):
     all_documents = []
     for uploaded_file in uploaded_files:
         if uploaded_file.name.endswith(".pdf"):
-            all_documents.extend(process_pdf(uploaded_file))
+            documents = process_pdf_with_layout(uploaded_file)
+            tables = extract_tables(uploaded_file)
+            all_documents.extend(documents)
+            all_documents.extend([Document(page_content=table.to_string()) for table in tables])
         elif uploaded_file.name.endswith(".xlsx"):
             all_documents.extend(process_excel(uploaded_file))
         elif uploaded_file.name.endswith(".csv"):
@@ -133,14 +137,9 @@ def generate_response(query, qa):
 
 # Main Streamlit app
 def main():
-    # st.title("INSIGHTOR!!!  Intelligent File Assistant")
-    # st.write("Upload PDFs, Excel, or CSV files and CHAT with your documents.")
-    
-
     st.title("INSIGHTOR!!!")
     st.subheader("Your Intelligent File Assistant")
     st.write("Upload PDFs, Excel, or CSV files and CHAT with your documents.")
-
 
     # File upload
     uploaded_files = st.file_uploader(
@@ -162,24 +161,17 @@ def main():
         llm = initialize_llm()
 
         # Define prompt for LLM
-        # prompt_template = """
-        # You are an intelligent assistant providing insights from the given context.
-        # Use only the provided data. If information is unavailable, reply with "I don't know."
-
-        # Context: {context}
-        # Question: {question}
-        # """
-
         prompt_template = """
-        You are an intelligent assistant that provides precise and contextually accurate insights based on the given data.
-        - If the data appears unstructured, such as text in circles, boxes, or misaligned formats, try to interpret and organize it logically before answering.
-        - Use only the provided context to generate answers. Avoid making assumptions or fabricating information.
-        - If the required information is unavailable or unclear, respond with "I don't know."
-        
+        You are an intelligent assistant that extracts and organizes insights from structured and unstructured documents. 
+        When responding:
+        1. Organize the information into a clear and logical structure (e.g., bullet points, tables).
+        2. Avoid repeating or overlapping details. Consolidate similar schemes or categories into distinct sections.
+        3. If the data appears unstructured (e.g., scattered, in boxes, or diagrams), interpret and align it logically based on context.
+        4. Use only the provided data for answers. If the information is unavailable or unclear, respond with "I don't know."
+
         Context: {context}
         Question: {question}
         """
-
         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
         # Create RetrievalQA chain
