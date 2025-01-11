@@ -11,6 +11,5 @@ openpyxl
 camelot-py[cv]
 pdf2image
 Pillow
-fitz  # PyMuPDF
 openpyxl
 
