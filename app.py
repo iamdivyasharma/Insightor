@@ -114,8 +114,14 @@ def generate_response(query, qa):
 
 # Main Streamlit app
 def main():
-    st.title("Your Intelligent File Assistant")
+    # st.title("INSIGHTOR!!!  Intelligent File Assistant")
+    # st.write("Upload PDFs, Excel, or CSV files and CHAT with your documents.")
+    
+
+    st.title("INSIGHTOR!!!")
+    st.subheader("Your Intelligent File Assistant")
     st.write("Upload PDFs, Excel, or CSV files and CHAT with your documents.")
+
 
     # File upload
     uploaded_files = st.file_uploader(
