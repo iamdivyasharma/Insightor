@@ -9,3 +9,4 @@ pillow
 lxml
 openpyxl
 camelot-py
+pdf2image
