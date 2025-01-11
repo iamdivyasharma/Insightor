@@ -9,4 +9,5 @@ pillow
 lxml
 openpyxl
 camelot-py
+python-poppler
 pdf2image
