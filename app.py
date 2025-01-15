@@ -129,21 +129,83 @@ def remove_redundant_sentences(content):
             unique_sentences.append(i)
 
     return ". ".join([sentences[i] for i in unique_sentences])
+def generate_analytics(documents, llm):
+    st.write("### Advanced Analytics Report")
+    prompt_template = """
+    Based on the following documents, generate an advanced analytics report:
+    1. Key Trends and Patterns (bullet points)
+    2. Statistical Highlights (bullet points)
+    3. Actionable Recommendations (bullet points)
+    Avoid including repetitive content or placeholders.
+    Documents:
+    {documents}
+    """
+    # Concatenate and deduplicate document contents
+    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
+    filtered_content = remove_redundant_sentences(raw_content)
+
+    # Ensure the content is meaningful
+    if not filtered_content.strip():
+        st.error("No valid content available for analytics.")
+        return
+
+    document_text = filtered_content[:3000]  # Limit to 3000 characters
+
+    # LLM Prompt Preparation
+    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+    analytics_prompt = prompt.format(documents=document_text)
+
+    try:
+        st.write("### Content Summary for Analytics")
+        st.write(f"Content sent to LLM (truncated):\n{document_text[:500]}...")
+
+        # Generate LLM insights
+        response = llm(analytics_prompt)
+        st.write("### Key Insights")
+        st.markdown(response)
+
+        # Enhanced Frequency Analysis
+        st.write("### Frequency Analysis of Key Terms")
+        vectorizer = CountVectorizer(max_features=10, stop_words="english")
+        term_matrix = vectorizer.fit_transform([filtered_content])
+        term_freq = term_matrix.toarray().sum(axis=0)
+        terms = vectorizer.get_feature_names_out()
+
+        # Display as a bar chart
+        term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq}).sort_values(by="Frequency", ascending=False)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
+        ax.set_title("Top 10 Terms by Frequency")
+        st.pyplot(fig)
+
+        # Statistical Analysis (if numeric data exists)
+        st.write("### Statistical Analysis")
+        numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
+        if not numeric_data.empty:
+            numeric_data = numeric_data.astype(float)
+            st.write("**Summary Statistics:**")
+            st.write(numeric_data.describe())
+        else:
+            st.info("No numeric data found for statistical analysis.")
+
+    except Exception as e:
+        st.error(f"Error generating analytics report: {e}")
+
 # def generate_analytics(documents, llm):
-#     st.write("### Analytics Report")
+#     st.write("### Advanced Analytics Report")
 #     prompt_template = """
-#     Analyze the following documents and generate a detailed analytics report. Highlight unique trends, key statistics, and relevant insights. 
-#     Provide results in the following format:
-#     1. Key Trends (bullet points)
-#     2. Top Statistics (bullet points)
-#     3. Insights and Recommendations (bullet points)
+#     Analyze the following documents and generate an advanced analytics report. Provide:
+#     1. Key Trends and Patterns (bullet points).
+#     2. Statistical Highlights (bullet points).
+#     3. Actionable Recommendations (bullet points).
+#     4. Visualizations to explain trends (optional, described textually if not directly visualizable).
 #     Documents:
 #     {documents}
 #     """
 #     # Concatenate and deduplicate document contents
 #     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
 #     filtered_content = remove_redundant_sentences(raw_content)
-#     document_text = filtered_content[:2000]  # Limit length to 2000 characters
+#     document_text = filtered_content[:3000]  # Limit length to 3000 characters
 
 #     if not document_text:
 #         st.error("No valid content available for analytics.")
@@ -154,19 +216,19 @@ def remove_redundant_sentences(content):
 #     analytics_prompt = prompt.format(documents=document_text)
 
 #     try:
-#         st.write(f"Content sent to LLM for analytics:\n{document_text}")
+#         st.write(f"Content sent to LLM for analytics:\n{document_text[:500]}...")  # Display a snippet for clarity
 #         response = llm(analytics_prompt)
 #         st.write("### Key Insights")
 #         st.markdown(response)
 
-#         # Generate a word cloud visualization
+#         # Generate Word Cloud for text-based data
 #         st.write("### Word Cloud of Key Terms")
 #         wordcloud = WordCloud(width=800, height=400, background_color='white').generate(filtered_content)
 #         st.image(wordcloud.to_array(), use_column_width=True)
 
-#         # Display a bar chart of top terms (example visualization)
-#         st.write("### Frequency of Top Terms")
-#         vectorizer = CountVectorizer(max_features=10, stop_words='english')
+#         # Advanced Term Frequency Analysis
+#         st.write("### Frequency Analysis")
+#         vectorizer = CountVectorizer(max_features=20, stop_words='english')
 #         term_matrix = vectorizer.fit_transform([filtered_content])
 #         term_freq = term_matrix.toarray().sum(axis=0)
 #         terms = vectorizer.get_feature_names_out()
@@ -174,81 +236,28 @@ def remove_redundant_sentences(content):
 #         term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq})
 #         term_data = term_data.sort_values(by="Frequency", ascending=False)
 
-#         fig, ax = plt.subplots(figsize=(8, 4))
-#         sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="viridis")
-#         ax.set_title("Top 10 Terms by Frequency")
+#         fig, ax = plt.subplots(figsize=(10, 6))
+#         sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
+#         ax.set_title("Top 20 Terms by Frequency")
 #         st.pyplot(fig)
+
+#         # Generate Statistical Analysis for Numeric Data
+#         st.write("### Statistical Analysis")
+#         numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
+#         if not numeric_data.empty:
+#             numeric_data = numeric_data.astype(float)
+#             st.write("**Summary Statistics:**")
+#             st.write(numeric_data.describe())
+
+#             st.write("**Correlation Matrix:**")
+#             fig, ax = plt.subplots(figsize=(8, 6))
+#             sns.heatmap(numeric_data.corr(), annot=True, cmap="YlGnBu", ax=ax)
+#             st.pyplot(fig)
+#         else:
+#             st.info("No numeric data found for statistical analysis.")
 
 #     except Exception as e:
 #         st.error(f"Error generating analytics report: {e}")
-
-def generate_analytics(documents, llm):
-    st.write("### Advanced Analytics Report")
-    prompt_template = """
-    Analyze the following documents and generate an advanced analytics report. Provide:
-    1. Key Trends and Patterns (bullet points).
-    2. Statistical Highlights (bullet points).
-    3. Actionable Recommendations (bullet points).
-    4. Visualizations to explain trends (optional, described textually if not directly visualizable).
-    Documents:
-    {documents}
-    """
-    # Concatenate and deduplicate document contents
-    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
-    filtered_content = remove_redundant_sentences(raw_content)
-    document_text = filtered_content[:3000]  # Limit length to 3000 characters
-
-    if not document_text:
-        st.error("No valid content available for analytics.")
-        return
-
-    # Format the LLM prompt
-    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-    analytics_prompt = prompt.format(documents=document_text)
-
-    try:
-        st.write(f"Content sent to LLM for analytics:\n{document_text[:500]}...")  # Display a snippet for clarity
-        response = llm(analytics_prompt)
-        st.write("### Key Insights")
-        st.markdown(response)
-
-        # Generate Word Cloud for text-based data
-        st.write("### Word Cloud of Key Terms")
-        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(filtered_content)
-        st.image(wordcloud.to_array(), use_column_width=True)
-
-        # Advanced Term Frequency Analysis
-        st.write("### Frequency Analysis")
-        vectorizer = CountVectorizer(max_features=20, stop_words='english')
-        term_matrix = vectorizer.fit_transform([filtered_content])
-        term_freq = term_matrix.toarray().sum(axis=0)
-        terms = vectorizer.get_feature_names_out()
-
-        term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq})
-        term_data = term_data.sort_values(by="Frequency", ascending=False)
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
-        ax.set_title("Top 20 Terms by Frequency")
-        st.pyplot(fig)
-
-        # Generate Statistical Analysis for Numeric Data
-        st.write("### Statistical Analysis")
-        numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
-        if not numeric_data.empty:
-            numeric_data = numeric_data.astype(float)
-            st.write("**Summary Statistics:**")
-            st.write(numeric_data.describe())
-
-            st.write("**Correlation Matrix:**")
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(numeric_data.corr(), annot=True, cmap="YlGnBu", ax=ax)
-            st.pyplot(fig)
-        else:
-            st.info("No numeric data found for statistical analysis.")
-
-    except Exception as e:
-        st.error(f"Error generating analytics report: {e}")
 
 
 # Generate summarization using LLM
