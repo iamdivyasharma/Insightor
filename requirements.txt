@@ -13,4 +13,17 @@ camelot-py[cv]
 pdf2image
 Pillow
 openpyxl
+streamlit
+pandas
+matplotlib
+seaborn
+pdfplumber
+opencv-python-headless
+pytesseract
+spacy
+textblob
+scikit-learn
+wordcloud
+langchain
+faiss-cpu
 
