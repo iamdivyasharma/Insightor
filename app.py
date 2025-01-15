@@ -313,126 +313,7 @@ def generate_recommendations(documents, llm):
     except Exception as e:
         st.error(f"Error generating recommendations: {e}")
 
-# Main Streamlit app
-# Main Streamlit app
-def main():
-    st.set_page_config(page_title="INSIGHTOR 2.0", layout="wide")
-
-    # Centered title and subtitle
-    st.markdown("""
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <h1 style="text-align: center;">INSIGHTOR 2.0</h1>
-            <h3 style="text-align: center;">Your Unified Document Processing Platform</h3>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Step 1: Display options as buttons in a single row
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
-
-    with col1:
-        if st.button("Analytics Report"):
-            selected_option = "Analytics Report"
-        else:
-            selected_option = None
-
-    with col2:
-        if st.button("Summarization"):
-            selected_option = "Summarization"
-
-    with col3:
-        if st.button("Recommendations"):
-            selected_option = "Recommendations"
-
-    with col4:
-        if st.button("Chat with Document"):
-            selected_option = "Chat with Document"
-
-    with col5:
-        if st.button("Visualize Data"):
-            selected_option = "Visualize Data"
-
-    with col6:
-        if st.button("None"):
-            selected_option = "None"
-
-    # Step 2: Handle None option
-    if selected_option == "None" or not selected_option:
-        st.info("Please select an option to proceed.")
-        return
-
-    # Step 3: File ingestion
-    st.write("### Data Ingestion")
-    uploaded_files = st.file_uploader(
-        "Upload your files (PDF, Excel, CSV, Images)", 
-        type=["pdf", "xlsx", "csv", "png", "jpg"], 
-        accept_multiple_files=True
-    )
-
-    if not uploaded_files:
-        st.warning("Please upload at least one file to continue.")
-        return
-
-    # Step 4: Process files only when files are uploaded
-    st.write("Processing uploaded files...")
-    documents = []
-    for idx, file in enumerate(uploaded_files):
-        documents.extend(process_files([file]))
-
-    if not documents:
-        st.error("No valid documents were processed.")
-        return
-    st.write(f"Processed {len(documents)} documents.")
-
-    # Step 5: Create vector store
-    st.write("### Creating Vector Store")
-    vectorstore = create_vector_store(documents)
-    if not vectorstore:
-        st.error("Vector store could not be created.")
-        return
-
-    # Step 6: Initialize LLM
-    try:
-        llm = initialize_llm()
-    except Exception as e:
-        st.error(f"Error initializing LLM: {e}")
-        return
-
-    # Step 7: Perform action based on user choice
-    if selected_option == "Analytics Report":
-        generate_analytics(documents, llm)
-    elif selected_option == "Summarization":
-        generate_summary(documents, llm)
-    elif selected_option == "Recommendations":
-        generate_recommendations(documents, llm)
-    elif selected_option == "Chat with Document":
-        prompt_template = """
-        You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
-        Provide concise and factual summaries using the given context.
-        Context: {context}
-        Question: {question}
-        """
-        llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever(),
-            chain_type_kwargs={"prompt": llama_prompt},
-            return_source_documents=False
-        )
-
-        query = st.text_input("Ask your question:")
-        if query:
-            try:
-                result = qa({"query": query})
-                st.write(f"**Bot:** {result['result']}")
-            except Exception as e:
-                st.error(f"Error generating response: {e}")
-    elif selected_option == "Visualize Data":
-        visualize_tables_and_numbers(documents)
-
-if __name__ == "__main__":
-    main()
+    
 # # Main Streamlit app
 # def main():
 #     st.set_page_config(page_title="INSIGHTOR 2.0", layout="wide")
@@ -525,89 +406,87 @@ if __name__ == "__main__":
 # if __name__ == "__main__":
 #     main()
 
+def main():
+    st.title("INSIGHTOR 2.0")
+    st.subheader("Your Unified Document Processing Platform")
 
+    # Step 1: User selects an option
+    st.write("### Select an Option:")
+    option = st.radio(
+        "What would you like to do?",
+        ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
+    )
 
-# def main():
-#     st.title("INSIGHTOR 2.0")
-#     st.subheader("Your Unified Document Processing Platform")
+    # Step 2: Only proceed if a valid option is selected
+    if option == "None":
+        st.info("Please select an option to proceed.")
+        return
 
-#     # Step 1: User selects an option
-#     st.write("### Select an Option:")
-#     option = st.radio(
-#         "What would you like to do?",
-#         ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
-#     )
+    # Step 3: File ingestion
+    st.write("### Data Ingestion")
+    uploaded_files = st.file_uploader(
+        "Upload your files (PDF, Excel, CSV, Images)", 
+        type=["pdf", "xlsx", "csv", "png", "jpg"], 
+        accept_multiple_files=True
+    )
 
-#     # Step 2: Only proceed if a valid option is selected
-#     if option == "None":
-#         st.info("Please select an option to proceed.")
-#         return
+    if not uploaded_files:
+        st.warning("Please upload at least one file to continue.")
+        return
 
-#     # Step 3: File ingestion
-#     st.write("### Data Ingestion")
-#     uploaded_files = st.file_uploader(
-#         "Upload your files (PDF, Excel, CSV, Images)", 
-#         type=["pdf", "xlsx", "csv", "png", "jpg"], 
-#         accept_multiple_files=True
-#     )
+    # Step 4: Process files only when files are uploaded
+    documents = process_files(uploaded_files)
+    if not documents:
+        st.error("No valid documents were processed.")
+        return
+    st.write(f"Processed {len(documents)} documents.")
 
-#     if not uploaded_files:
-#         st.warning("Please upload at least one file to continue.")
-#         return
+    # Step 5: Create vector store
+    vectorstore = create_vector_store(documents)
+    if not vectorstore:
+        st.error("Vector store could not be created.")
+        return
 
-#     # Step 4: Process files only when files are uploaded
-#     documents = process_files(uploaded_files)
-#     if not documents:
-#         st.error("No valid documents were processed.")
-#         return
-#     st.write(f"Processed {len(documents)} documents.")
+    # Step 6: Initialize LLM
+    try:
+        llm = initialize_llm()
+    except Exception as e:
+        st.error(f"Error initializing LLM: {e}")
+        return
 
-#     # Step 5: Create vector store
-#     vectorstore = create_vector_store(documents)
-#     if not vectorstore:
-#         st.error("Vector store could not be created.")
-#         return
+    # Step 7: Perform action based on user choice
+    if option == "Analytics Report":
+        generate_analytics(documents, llm)
+    elif option == "Summarization":
+        generate_summary(documents, llm)
+    elif option == "Recommendations":
+        generate_recommendations(documents, llm)
+    elif option == "Chat with Your Document":
+        prompt_template = """
+        You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
+        Provide concise and factual summaries using the given context.
+        Context: {context}
+        Question: {question}
+        """
+        llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
-#     # Step 6: Initialize LLM
-#     try:
-#         llm = initialize_llm()
-#     except Exception as e:
-#         st.error(f"Error initializing LLM: {e}")
-#         return
+        qa = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=vectorstore.as_retriever(),
+            chain_type_kwargs={"prompt": llama_prompt},
+            return_source_documents=False
+        )
 
-#     # Step 7: Perform action based on user choice
-#     if option == "Analytics Report":
-#         generate_analytics(documents, llm)
-#     elif option == "Summarization":
-#         generate_summary(documents, llm)
-#     elif option == "Recommendations":
-#         generate_recommendations(documents, llm)
-#     elif option == "Chat with Your Document":
-#         prompt_template = """
-#         You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
-#         Provide concise and factual summaries using the given context.
-#         Context: {context}
-#         Question: {question}
-#         """
-#         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+        query = st.text_input("Ask your question:")
+        if query:
+            try:
+                result = qa({"query": query})
+                st.write(f"**Bot:** {result['result']}")
+            except Exception as e:
+                st.error(f"Error generating response: {e}")
+    elif option == "Visualize Tables and Numbers":
+        visualize_tables_and_numbers(documents)
 
-#         qa = RetrievalQA.from_chain_type(
-#             llm=llm,
-#             chain_type="stuff",
-#             retriever=vectorstore.as_retriever(),
-#             chain_type_kwargs={"prompt": llama_prompt},
-#             return_source_documents=False
-#         )
-
-#         query = st.text_input("Ask your question:")
-#         if query:
-#             try:
-#                 result = qa({"query": query})
-#                 st.write(f"**Bot:** {result['result']}")
-#             except Exception as e:
-#                 st.error(f"Error generating response: {e}")
-#     elif option == "Visualize Tables and Numbers":
-#         visualize_tables_and_numbers(documents)
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
