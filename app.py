@@ -125,7 +125,7 @@ def remove_redundant_sentences(content):
     # Keep sentences with low redundancy
     unique_sentences = []
     for i, sentence in enumerate(sentences):
-        if not any(cosine_similarity([embeddings[i]], [embeddings[j]])[0, 0] > 0.85 for j in range(len(unique_sentences))):
+        if not any(cosine_similarity([embeddings[i]], [embeddings[j]])[0, 0] > 0.75 for j in range(len(unique_sentences))):
             unique_sentences.append(i)
 
     return ". ".join([sentences[i] for i in unique_sentences])
@@ -133,22 +133,54 @@ def remove_redundant_sentences(content):
 def generate_analytics(documents, llm):
     st.write("### Advanced Analytics Report")
     prompt_template = """
-    Generate a detailed analytics report based on the provided documents. The report should address the following key areas:
+    You are an advanced analytics assistant. Based on the provided documents, generate a comprehensive analytics report. 
     
-    1. **Key Trends and Patterns**: Summarize significant trends and recurring patterns in the data.
-    2. **Root Cause Analysis**: Identify the underlying reasons for observed trends or anomalies.
-    3. **Top Drivers and Detractors**: Highlight factors contributing to positive outcomes and those causing challenges or declines.
-    4. **Competitor Analysis**: Compare performance or metrics with top competitors, where applicable.
-    5. **Quarter/Year Comparisons**: Provide insights into changes compared to the previous quarter or year.
-    6. **Unusual Trends or Anomalies**: Detect and explain unexpected findings or deviations in the data.
-    7. **Statistical Highlights**: Summarize key numbers, metrics, or statistical findings.
-    8. **Actionable Recommendations**: Provide specific, practical recommendations to improve performance, mitigate risks, and leverage opportunities.
+    ### Key Areas to Address:
+    1. **Key Trends and Patterns**:
+       - Summarize significant trends and recurring patterns.
+    2. **Root Cause Analysis**:
+       - Identify the underlying reasons for observed trends or anomalies.
+    3. **Top Drivers and Detractors**:
+       - Highlight key factors contributing to positive and negative outcomes.
+    4. **Competitor Analysis**:
+       - Compare performance or metrics with top competitors, if applicable.
+    5. **Quarter/Year Comparisons**:
+       - Provide insights into changes compared to the previous quarter or year.
+    6. **Unusual Trends or Anomalies**:
+       - Detect and explain unexpected findings or deviations in the data.
+    7. **Statistical Highlights**:
+       - Summarize key metrics, trends, or statistical findings.
+    8. **Actionable Recommendations**:
+       - Provide specific, practical recommendations to improve performance, mitigate risks, and leverage opportunities.
     
-    Ensure the report is concise, avoids redundancy, and uses bullet points for clarity.
+    ### Guidelines for Output:
+    - Use concise language and bullet points for clarity.
+    - Avoid redundant or repetitive information.
+    - Focus on actionable insights backed by the data.
     
-    Documents:
+    ### Input Documents:
     {documents}
+    
+    Ensure the report is well-structured, coherent, and aligned with the above format.
     """
+
+    # prompt_template = """
+    # Generate a detailed analytics report based on the provided documents. The report should address the following key areas:
+    
+    # 1. **Key Trends and Patterns**: Summarize significant trends and recurring patterns in the data.
+    # 2. **Root Cause Analysis**: Identify the underlying reasons for observed trends or anomalies.
+    # 3. **Top Drivers and Detractors**: Highlight factors contributing to positive outcomes and those causing challenges or declines.
+    # 4. **Competitor Analysis**: Compare performance or metrics with top competitors, where applicable.
+    # 5. **Quarter/Year Comparisons**: Provide insights into changes compared to the previous quarter or year.
+    # 6. **Unusual Trends or Anomalies**: Detect and explain unexpected findings or deviations in the data.
+    # 7. **Statistical Highlights**: Summarize key numbers, metrics, or statistical findings.
+    # 8. **Actionable Recommendations**: Provide specific, practical recommendations to improve performance, mitigate risks, and leverage opportunities.
+    
+    # Ensure the report is concise, avoids redundancy, and uses bullet points for clarity.
+    
+    # Documents:
+    # {documents}
+    # """
 
     # prompt_template = """
     # Based on the provided documents, generate a comprehensive analytics report addressing the following aspects:
