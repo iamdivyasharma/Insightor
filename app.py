@@ -129,183 +129,67 @@ def remove_redundant_sentences(content):
             unique_sentences.append(i)
 
     return ". ".join([sentences[i] for i in unique_sentences])
+
+# Visualize tables and numeric data
+def visualize_tables_and_numbers(documents):
+    st.write("### Numeric Data and Table Visualizations")
+    numeric_tables = []
+
+    # Extract tables and numeric data from documents
+    for doc in documents:
+        try:
+            if doc.page_content.isnumeric():
+                # Handle standalone numeric content
+                numeric_tables.append(pd.DataFrame({"Values": [float(doc.page_content)]}))
+            elif isinstance(doc.page_content, str) and "\t" in doc.page_content:
+                # Parse tabular content
+                rows = [row.split("\t") for row in doc.page_content.split("\n") if row.strip()]
+                if len(rows) > 1:  # Ensure it's a valid table
+                    df = pd.DataFrame(rows[1:], columns=rows[0])
+                    numeric_tables.append(df)
+        except Exception as e:
+            st.error(f"Error processing document content: {e}")
+
+    # Combine all numeric tables for visualization
+    if not numeric_tables:
+        st.info("No tables or numeric data detected in the documents.")
+        return
+
+    for idx, table in enumerate(numeric_tables):
+        st.write(f"### Table {idx + 1}")
+        st.write(table)
+
+        # Attempt to visualize numeric columns
+        try:
+            numeric_cols = table.select_dtypes(include=['float', 'int'])
+            if not numeric_cols.empty:
+                st.write(f"### Visual Representation of Table {idx + 1}")
+                fig, ax = plt.subplots(figsize=(8, 4))
+                numeric_cols.plot(kind='bar', ax=ax, legend=True, rot=0)
+                ax.set_title(f"Visualization of Table {idx + 1}")
+                st.pyplot(fig)
+            else:
+                st.info(f"No numeric columns detected in Table {idx + 1}.")
+        except Exception as e:
+            st.error(f"Error visualizing Table {idx + 1}: {e}")
+
+# Generate analytics report using LLM
 def generate_analytics(documents, llm):
     st.write("### Advanced Analytics Report")
     prompt_template = """
-    Based on the following documents, generate an advanced analytics report:
-    1. Key Trends and Patterns (bullet points)
-    2. Statistical Highlights (bullet points)
-    3. Actionable Recommendations (bullet points)
-    Avoid including repetitive content or placeholders.
-    Documents:
-    {documents}
-    """
-    # Concatenate and deduplicate document contents
-    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
-    filtered_content = remove_redundant_sentences(raw_content)
-
-    # Ensure the content is meaningful
-    if not filtered_content.strip():
-        st.error("No valid content available for analytics.")
-        return
-
-    document_text = filtered_content[:3000]  # Limit to 3000 characters
-
-    # LLM Prompt Preparation
-    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-    analytics_prompt = prompt.format(documents=document_text)
-
-    try:
-        st.write("### Content Summary for Analytics")
-        st.write(f"Content sent to LLM (truncated):\n{document_text[:500]}...")
-
-        # Generate LLM insights
-        response = llm(analytics_prompt)
-        st.write("### Key Insights")
-        st.markdown(response)
-
-        # Enhanced Frequency Analysis
-        st.write("### Frequency Analysis of Key Terms")
-        vectorizer = CountVectorizer(max_features=10, stop_words="english")
-        term_matrix = vectorizer.fit_transform([filtered_content])
-        term_freq = term_matrix.toarray().sum(axis=0)
-        terms = vectorizer.get_feature_names_out()
-
-        # Display as a bar chart
-        term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq}).sort_values(by="Frequency", ascending=False)
-        fig, ax = plt.subplots(figsize=(8, 4))
-        sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
-        ax.set_title("Top 10 Terms by Frequency")
-        st.pyplot(fig)
-
-        # Statistical Analysis (if numeric data exists)
-        st.write("### Statistical Analysis")
-        numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
-        if not numeric_data.empty:
-            numeric_data = numeric_data.astype(float)
-            st.write("**Summary Statistics:**")
-            st.write(numeric_data.describe())
-        else:
-            st.info("No numeric data found for statistical analysis.")
-
-    except Exception as e:
-        st.error(f"Error generating analytics report: {e}")
-
-# def generate_analytics(documents, llm):
-#     st.write("### Advanced Analytics Report")
-#     prompt_template = """
-#     Analyze the following documents and generate an advanced analytics report. Provide:
-#     1. Key Trends and Patterns (bullet points).
-#     2. Statistical Highlights (bullet points).
-#     3. Actionable Recommendations (bullet points).
-#     4. Visualizations to explain trends (optional, described textually if not directly visualizable).
-#     Documents:
-#     {documents}
-#     """
-#     # Concatenate and deduplicate document contents
-#     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
-#     filtered_content = remove_redundant_sentences(raw_content)
-#     document_text = filtered_content[:3000]  # Limit length to 3000 characters
-
-#     if not document_text:
-#         st.error("No valid content available for analytics.")
-#         return
-
-#     # Format the LLM prompt
-#     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-#     analytics_prompt = prompt.format(documents=document_text)
-
-#     try:
-#         st.write(f"Content sent to LLM for analytics:\n{document_text[:500]}...")  # Display a snippet for clarity
-#         response = llm(analytics_prompt)
-#         st.write("### Key Insights")
-#         st.markdown(response)
-
-#         # Generate Word Cloud for text-based data
-#         st.write("### Word Cloud of Key Terms")
-#         wordcloud = WordCloud(width=800, height=400, background_color='white').generate(filtered_content)
-#         st.image(wordcloud.to_array(), use_column_width=True)
-
-#         # Advanced Term Frequency Analysis
-#         st.write("### Frequency Analysis")
-#         vectorizer = CountVectorizer(max_features=20, stop_words='english')
-#         term_matrix = vectorizer.fit_transform([filtered_content])
-#         term_freq = term_matrix.toarray().sum(axis=0)
-#         terms = vectorizer.get_feature_names_out()
-
-#         term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq})
-#         term_data = term_data.sort_values(by="Frequency", ascending=False)
-
-#         fig, ax = plt.subplots(figsize=(10, 6))
-#         sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
-#         ax.set_title("Top 20 Terms by Frequency")
-#         st.pyplot(fig)
-
-#         # Generate Statistical Analysis for Numeric Data
-#         st.write("### Statistical Analysis")
-#         numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
-#         if not numeric_data.empty:
-#             numeric_data = numeric_data.astype(float)
-#             st.write("**Summary Statistics:**")
-#             st.write(numeric_data.describe())
-
-#             st.write("**Correlation Matrix:**")
-#             fig, ax = plt.subplots(figsize=(8, 6))
-#             sns.heatmap(numeric_data.corr(), annot=True, cmap="YlGnBu", ax=ax)
-#             st.pyplot(fig)
-#         else:
-#             st.info("No numeric data found for statistical analysis.")
-
-#     except Exception as e:
-#         st.error(f"Error generating analytics report: {e}")
-
-
-# Generate summarization using LLM
-def generate_summary(documents, llm):
-    st.write("### Summary")
-    prompt_template = """
-    Summarize the following documents concisely, eliminating repetitive content and focusing on key points:
-    Documents:
-    {documents}
-    """
-    # Concatenate document contents
-    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
-
-    # Remove redundant sentences
-    filtered_content = remove_redundant_sentences(raw_content)
-    document_text = filtered_content[:2000]  # Limit length to 2000 characters
-
-    if not document_text:
-        st.error("No valid content available for summarization.")
-        return
-
-    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-    summary_prompt = prompt.format(documents=document_text)
-
-    try:
-        st.write(f"Content sent to LLM for summarization:\n{document_text}")
-        response = llm(summary_prompt)
-        st.write(response)
-    except Exception as e:
-        st.error(f"Error generating summary: {e}")
-
-# Generate recommendations using LLM
-def generate_recommendations(documents, llm):
-    st.write("### Recommendations")
-    prompt_template = """
-    Based on the content of the following documents, generate actionable recommendations to improve processes or decision-making.
+    Analyze the following documents and generate a detailed analytics report. Include key statistics, trends, and relevant insights.
     Documents:
     {documents}
     """
     document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-    recommendations_prompt = prompt.format(documents=document_text)
+    analytics_prompt = prompt.format(documents=document_text)
 
     try:
-        response = llm(recommendations_prompt)
+        response = llm(analytics_prompt)
         st.write(response)
     except Exception as e:
-        st.error(f"Error generating recommendations: {e}")
+        st.error(f"Error generating analytics report: {e}")
 
 # Main Streamlit app
 def main():
@@ -316,7 +200,7 @@ def main():
     st.write("### Select an Option:")
     option = st.radio(
         "What would you like to do?",
-        ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document")
+        ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
     )
 
     # Step 2: Only proceed if a valid option is selected
@@ -381,6 +265,8 @@ def main():
                 st.write(f"**Bot:** {result['result']}")
             except Exception as e:
                 st.error(f"Error generating response: {e}")
+    elif option == "Visualize Tables and Numbers":
+        visualize_tables_and_numbers(documents)
 
 if __name__ == "__main__":
     main()
