@@ -290,16 +290,15 @@ def generate_summary(documents, llm):
         st.error(f"Error generating summary: {e}")
 
 # Generate recommendations using LLM
-
 def generate_recommendations(documents, llm):
     st.write("### Recommendations")
     prompt_template = """
-    Based on the following documents, provide actionable recommendations to improve outcomes. Include:
-    1. Specific strategies to address key challenges.
-    2. Opportunities for leveraging current trends.
-    3. Tailored suggestions for risk mitigation.
-    4. Insights that align with industry best practices.
-    Recommendations should be concise, targeted, and supported by evidence from the document content.
+    Analyze the following documents and provide actionable and specific recommendations. Ensure:
+    1. Each recommendation is unique and avoids redundancy.
+    2. Address key challenges with concrete strategies.
+    3. Highlight opportunities for innovation or efficiency improvements.
+    4. Provide risk mitigation steps supported by the document's insights.
+    5. Recommendations should be categorized where applicable, such as 'Operational', 'Strategic', or 'Risk Management'.
     Documents:
     {documents}
     """
@@ -312,6 +311,7 @@ def generate_recommendations(documents, llm):
         st.write(response)
     except Exception as e:
         st.error(f"Error generating recommendations: {e}")
+
 # def generate_recommendations(documents, llm):
 #     st.write("### Recommendations")
 #     prompt_template = """
