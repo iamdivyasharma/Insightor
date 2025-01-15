@@ -273,7 +273,7 @@ def generate_summary(documents, llm):
 
     # Remove redundant sentences
     filtered_content = remove_redundant_sentences(raw_content)
-    document_text = filtered_content[:2000]  # Limit length to 2000 characters
+    document_text = filtered_content[:3000]  # Limit length to 2000 characters
 
     if not document_text:
         st.error("No valid content available for summarization.")
@@ -314,99 +314,9 @@ def generate_recommendations(documents, llm):
         st.error(f"Error generating recommendations: {e}")
 
     
-# # Main Streamlit app
-# def main():
-#     st.set_page_config(page_title="INSIGHTOR 2.0", layout="wide")
-#     st.title("INSIGHTOR 2.0")
-#     st.subheader("Your Unified Document Processing Platform")
-
-#     # Step 1: User selects an option
-#     st.write("### Select an Option:")
-#     option = st.radio(
-#         "What would you like to do?",
-#         ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
-#     )
-
-#     # Step 2: Only proceed if a valid option is selected
-#     if option == "None":
-#         st.info("Please select an option to proceed.")
-#         return
-
-#     # Step 3: File ingestion
-#     st.write("### Data Ingestion")
-#     uploaded_files = st.file_uploader(
-#         "Upload your files (PDF, Excel, CSV, Images)", 
-#         type=["pdf", "xlsx", "csv", "png", "jpg"], 
-#         accept_multiple_files=True
-#     )
-
-#     if not uploaded_files:
-#         st.warning("Please upload at least one file to continue.")
-#         return
-
-#     # Step 4: Process files only when files are uploaded
-#     st.write("Processing uploaded files...")
-#     documents = []
-#     for file in stqdm(uploaded_files, desc="Processing files..."):
-#         documents.extend(process_files([file]))
-
-#     if not documents:
-#         st.error("No valid documents were processed.")
-#         return
-#     st.write(f"Processed {len(documents)} documents.")
-
-#     # Step 5: Create vector store
-#     st.write("### Creating Vector Store")
-#     vectorstore = create_vector_store(documents)
-#     if not vectorstore:
-#         st.error("Vector store could not be created.")
-#         return
-
-#     # Step 6: Initialize LLM
-#     try:
-#         llm = initialize_llm()
-#     except Exception as e:
-#         st.error(f"Error initializing LLM: {e}")
-#         return
-
-#     # Step 7: Perform action based on user choice
-#     if option == "Analytics Report":
-#         generate_analytics(documents, llm)
-#     elif option == "Summarization":
-#         generate_summary(documents, llm)
-#     elif option == "Recommendations":
-#         generate_recommendations(documents, llm)
-#     elif option == "Chat with Your Document":
-#         prompt_template = """
-#         You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
-#         Provide concise and factual summaries using the given context.
-#         Context: {context}
-#         Question: {question}
-#         """
-#         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-
-#         qa = RetrievalQA.from_chain_type(
-#             llm=llm,
-#             chain_type="stuff",
-#             retriever=vectorstore.as_retriever(),
-#             chain_type_kwargs={"prompt": llama_prompt},
-#             return_source_documents=False
-#         )
-
-#         query = st.text_input("Ask your question:")
-#         if query:
-#             try:
-#                 result = qa({"query": query})
-#                 st.write(f"**Bot:** {result['result']}")
-#             except Exception as e:
-#                 st.error(f"Error generating response: {e}")
-#     elif option == "Visualize Tables and Numbers":
-#         visualize_tables_and_numbers(documents)
-
-# if __name__ == "__main__":
-#     main()
-
+# Main Streamlit app
 def main():
+    st.set_page_config(page_title="INSIGHTOR 2.0", layout="wide")
     st.title("INSIGHTOR 2.0")
     st.subheader("Your Unified Document Processing Platform")
 
@@ -435,13 +345,18 @@ def main():
         return
 
     # Step 4: Process files only when files are uploaded
-    documents = process_files(uploaded_files)
+    st.write("Processing uploaded files...")
+    documents = []
+    for file in stqdm(uploaded_files, desc="Processing files..."):
+        documents.extend(process_files([file]))
+
     if not documents:
         st.error("No valid documents were processed.")
         return
     st.write(f"Processed {len(documents)} documents.")
 
     # Step 5: Create vector store
+    st.write("### Creating Vector Store")
     vectorstore = create_vector_store(documents)
     if not vectorstore:
         st.error("Vector store could not be created.")
@@ -490,3 +405,88 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# def main():
+#     st.title("INSIGHTOR 2.0")
+#     st.subheader("Your Unified Document Processing Platform")
+
+#     # Step 1: User selects an option
+#     st.write("### Select an Option:")
+#     option = st.radio(
+#         "What would you like to do?",
+#         ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
+#     )
+
+#     # Step 2: Only proceed if a valid option is selected
+#     if option == "None":
+#         st.info("Please select an option to proceed.")
+#         return
+
+#     # Step 3: File ingestion
+#     st.write("### Data Ingestion")
+#     uploaded_files = st.file_uploader(
+#         "Upload your files (PDF, Excel, CSV, Images)", 
+#         type=["pdf", "xlsx", "csv", "png", "jpg"], 
+#         accept_multiple_files=True
+#     )
+
+#     if not uploaded_files:
+#         st.warning("Please upload at least one file to continue.")
+#         return
+
+#     # Step 4: Process files only when files are uploaded
+#     documents = process_files(uploaded_files)
+#     if not documents:
+#         st.error("No valid documents were processed.")
+#         return
+#     st.write(f"Processed {len(documents)} documents.")
+
+#     # Step 5: Create vector store
+#     vectorstore = create_vector_store(documents)
+#     if not vectorstore:
+#         st.error("Vector store could not be created.")
+#         return
+
+#     # Step 6: Initialize LLM
+#     try:
+#         llm = initialize_llm()
+#     except Exception as e:
+#         st.error(f"Error initializing LLM: {e}")
+#         return
+
+#     # Step 7: Perform action based on user choice
+#     if option == "Analytics Report":
+#         generate_analytics(documents, llm)
+#     elif option == "Summarization":
+#         generate_summary(documents, llm)
+#     elif option == "Recommendations":
+#         generate_recommendations(documents, llm)
+#     elif option == "Chat with Your Document":
+#         prompt_template = """
+#         You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
+#         Provide concise and factual summaries using the given context.
+#         Context: {context}
+#         Question: {question}
+#         """
+#         llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+
+#         qa = RetrievalQA.from_chain_type(
+#             llm=llm,
+#             chain_type="stuff",
+#             retriever=vectorstore.as_retriever(),
+#             chain_type_kwargs={"prompt": llama_prompt},
+#             return_source_documents=False
+#         )
+
+#         query = st.text_input("Ask your question:")
+#         if query:
+#             try:
+#                 result = qa({"query": query})
+#                 st.write(f"**Bot:** {result['result']}")
+#             except Exception as e:
+#                 st.error(f"Error generating response: {e}")
+#     elif option == "Visualize Tables and Numbers":
+#         visualize_tables_and_numbers(documents)
+
+# if __name__ == "__main__":
+#     main()
