@@ -32,94 +32,61 @@ def initialize_llm():
         temperature=0.5
     )
 
-# Process text from PDFs
-def process_pdf_text(pdf_file):
-    text_data = []
+# Process PDF using pdfplumber
+def process_pdf_with_pdfplumber(pdf_file):
+    all_text = []
     try:
         with pdfplumber.open(pdf_file) as pdf:
             for page in pdf.pages:
+                # Extract text
                 text = page.extract_text()
                 if text:
-                    text_data.append(Document(page_content=text))
+                    all_text.append(Document(page_content=text))
+
+                # Extract tables
+                tables = page.extract_tables()
+                for table in tables:
+                    table_text = "\n".join([
+                        "\t".join(str(cell) if cell is not None else "" for cell in row) for row in table if row
+                    ])
+                    all_text.append(Document(page_content=table_text))
     except Exception as e:
-        st.error(f"Error processing PDF text: {e}")
-    return text_data
+        st.error(f"Error processing PDF: {e}")
+    return all_text
 
-# Sentiment Analysis
-def sentiment_analysis(documents):
-    st.write("### Sentiment Analysis")
-    from textblob import TextBlob
+# Function to process Excel files
+def process_excel(file):
+    try:
+        df = pd.read_excel(file)
+        documents = [
+            Document(page_content=" ".join(map(str, row.values)))
+            for _, row in df.iterrows()
+        ]
+        return documents
+    except Exception as e:
+        st.error(f"Error processing Excel file: {e}")
+        return []
 
-    sentiments = []
-    for doc in documents:
-        analysis = TextBlob(doc.page_content)
-        sentiments.append(analysis.sentiment.polarity)
+# Function to process CSV files
+def process_csv(file):
+    try:
+        df = pd.read_csv(file)
+        documents = [
+            Document(page_content=" ".join(map(str, row.values)))
+            for _, row in df.iterrows()
+        ]
+        return documents
+    except Exception as e:
+        st.error(f"Error processing CSV file: {e}")
+        return []
 
-    fig, ax = plt.subplots()
-    sns.histplot(sentiments, kde=True, ax=ax)
-    ax.set_title("Sentiment Polarity Distribution")
-    ax.set_xlabel("Polarity")
-    ax.set_ylabel("Frequency")
-    st.pyplot(fig)
-
-    st.write("**Insights:**")
-    st.write("- Polarity ranges from -1 (negative) to 1 (positive).")
-    st.write(f"- Average Sentiment Polarity: {sum(sentiments) / len(sentiments):.2f}")
-
-# Named Entity Recognition
-def named_entity_recognition(documents):
-    st.write("### Named Entity Recognition")
-    nlp = spacy.load("en_core_web_sm")
-    entity_counts = {}
-
-    for doc in documents:
-        spacy_doc = nlp(doc.page_content)
-        for ent in spacy_doc.ents:
-            entity_counts[ent.label_] = entity_counts.get(ent.label_, 0) + 1
-
-    labels, counts = zip(*entity_counts.items())
-
-    fig, ax = plt.subplots()
-    sns.barplot(x=list(labels), y=list(counts), ax=ax)
-    ax.set_title("Entity Counts by Type")
-    ax.set_ylabel("Frequency")
-    ax.set_xlabel("Entity Type")
-    st.pyplot(fig)
-
-# Topic Modeling
-def topic_modeling(documents):
-    st.write("### Topic Modeling")
-
-    # Prepare data
-    vectorizer = CountVectorizer(max_df=0.95, min_df=2, stop_words="english")
-    all_text = [doc.page_content for doc in documents]
-    dtm = vectorizer.fit_transform(all_text)
-
-    # Apply LDA
-    lda = LatentDirichletAllocation(n_components=5, random_state=42)
-    lda.fit(dtm)
-
-    topics = lda.components_
-    feature_names = vectorizer.get_feature_names_out()
-
-    st.write("**Top Words Per Topic:**")
-    for topic_idx, topic in enumerate(topics):
-        st.write(f"Topic {topic_idx + 1}: {', '.join([feature_names[i] for i in topic.argsort()[:-6:-1]])}")
-
-    # Visualize topics
-    fig, ax = plt.subplots()
-    sns.heatmap(lda.components_, cmap="YlGnBu", yticklabels=[f"Topic {i + 1}" for i in range(len(topics))],
-                xticklabels=False, cbar_kws={"label": "Word Importance"})
-    ax.set_title("Topic Heatmap")
-    st.pyplot(fig)
-
-# Unified file processing
+# Function to handle all file types
 def process_files(uploaded_files):
     all_documents = []
     for file in uploaded_files:
         if file.name.endswith(".pdf"):
-            text_data = process_pdf_text(file)
-            all_documents.extend(text_data)
+            extracted_data = process_pdf_with_pdfplumber(file)
+            all_documents.extend(extracted_data)
         elif file.name.endswith(".xlsx"):
             all_documents.extend(process_excel(file))
         elif file.name.endswith(".csv"):
@@ -128,13 +95,73 @@ def process_files(uploaded_files):
             st.warning(f"Unsupported file type: {file.name}")
     return all_documents
 
-# Allow direct text input
-def direct_text_input():
-    st.write("### Direct Text Input")
-    text_input = st.text_area("Enter your text here:", "")
-    if text_input:
-        return [Document(page_content=text_input)]
-    return []
+# Create vector store
+def create_vector_store(documents):
+    if not documents:
+        st.error("No valid documents to create a vector store.")
+        return None
+    try:
+        st.write("Initializing embeddings model...")
+        embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        st.write("Creating vector store...")
+        return FAISS.from_documents(documents, embedding)
+    except Exception as e:
+        st.error(f"Error creating vector store: {e}")
+        return None
+
+# Generate analytics report using LLM
+def generate_analytics(documents, llm):
+    st.write("### Analytics Report")
+    prompt_template = """
+    Analyze the following documents and generate a detailed analytics report. Include key statistics, trends, and any relevant insights.
+    Documents:
+    {documents}
+    """
+    document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+    analytics_prompt = prompt.format(documents=document_text)
+
+    try:
+        response = llm(analytics_prompt)
+        st.write(response)
+    except Exception as e:
+        st.error(f"Error generating analytics report: {e}")
+
+# Generate summarization using LLM
+def generate_summary(documents, llm):
+    st.write("### Summary")
+    prompt_template = """
+    Summarize the following documents concisely, highlighting key points and important details:
+    Documents:
+    {documents}
+    """
+    document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+    summary_prompt = prompt.format(documents=document_text)
+
+    try:
+        response = llm(summary_prompt)
+        st.write(response)
+    except Exception as e:
+        st.error(f"Error generating summary: {e}")
+
+# Generate recommendations using LLM
+def generate_recommendations(documents, llm):
+    st.write("### Recommendations")
+    prompt_template = """
+    Based on the content of the following documents, generate actionable recommendations to improve processes or decision-making.
+    Documents:
+    {documents}
+    """
+    document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+    prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+    recommendations_prompt = prompt.format(documents=document_text)
+
+    try:
+        response = llm(recommendations_prompt)
+        st.write(response)
+    except Exception as e:
+        st.error(f"Error generating recommendations: {e}")
 
 # Main Streamlit app
 def main():
@@ -142,81 +169,64 @@ def main():
     st.subheader("Your Unified Document Processing Platform")
 
     st.write("### Data Ingestion")
-    ingestion_option = st.radio(
-        "Choose your data ingestion method:",
-        ("Upload Files", "Direct Text Input")
+    uploaded_files = st.file_uploader(
+        "Upload your files (PDF, Excel, CSV, Images)", 
+        type=["pdf", "xlsx", "csv", "png", "jpg"], 
+        accept_multiple_files=True
     )
 
-    documents = []
-
-    if ingestion_option == "Upload Files":
-        uploaded_files = st.file_uploader(
-            "Upload your files (PDF, Excel, CSV, Images)", 
-            type=["pdf", "xlsx", "csv", "png", "jpg"], 
-            accept_multiple_files=True
-        )
-        if uploaded_files:
-            documents = process_files(uploaded_files)
-            if not documents:
-                st.warning("No valid documents found. Please upload supported files.")
-                return
-    elif ingestion_option == "Direct Text Input":
-        documents = direct_text_input()
+    if uploaded_files:
+        documents = process_files(uploaded_files)
+        st.write(f"Processed {len(documents)} documents.")
         if not documents:
-            st.warning("No text entered. Please provide input.")
+            st.warning("No valid documents found. Please upload supported files.")
             return
 
-    if not documents:
-        return
+        vectorstore = create_vector_store(documents)
+        if vectorstore is None:
+            return
 
-    vectorstore = create_vector_store(documents)
-    if vectorstore is None:
-        return
+        llm = initialize_llm()
 
-    llm = initialize_llm()
-
-    st.write("### Select an Option:")
-    option = st.radio(
-        "What would you like to do?",
-        ("Analytics Report", "Sentiment Analysis", "NER", "Topic Modeling", "Chat with Your Document")
-    )
-
-    if option == "Analytics Report":
-        generate_advanced_analytics(documents)
-
-    elif option == "Sentiment Analysis":
-        sentiment_analysis(documents)
-
-    elif option == "NER":
-        named_entity_recognition(documents)
-
-    elif option == "Topic Modeling":
-        topic_modeling(documents)
-
-    elif option == "Chat with Your Document":
-        prompt_template = """
-        You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
-        Provide concise and factual summaries using the given context.
-        Context: {context}
-        Question: {question}
-        """
-        llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever(),
-            chain_type_kwargs={"prompt": llama_prompt},
-            return_source_documents=False
+        st.write("### Select an Option:")
+        option = st.radio(
+            "What would you like to do?",
+            ("Analytics Report", "Summarization", "Recommendations", "Chat with Your Document")
         )
 
-        query = st.text_input("Ask your question:")
-        if query:
-            try:
-                result = qa({"query": query})
-                st.write(f"**Bot:** {result['result']}")
-            except Exception as e:
-                st.error(f"Error generating response: {e}")
+        if option == "Analytics Report":
+            generate_analytics(documents, llm)
+
+        elif option == "Summarization":
+            generate_summary(documents, llm)
+
+        elif option == "Recommendations":
+            generate_recommendations(documents, llm)
+
+        elif option == "Chat with Your Document":
+            prompt_template = """
+            You are an intelligent assistant tasked with extracting precise insights from structured and unstructured documents. 
+            Provide concise and factual summaries using the given context.
+            Context: {context}
+            Question: {question}
+            """
+            llama_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+
+            qa = RetrievalQA.from_chain_type(
+                llm=llm,
+                chain_type="stuff",
+                retriever=vectorstore.as_retriever(),
+                chain_type_kwargs={"prompt": llama_prompt},
+                return_source_documents=False
+            )
+
+            query = st.text_input("Ask your question:")
+            if query:
+                try:
+                    result = qa({"query": query})
+                    st.write(f"**Bot:** {result['result']}")
+                except Exception as e:
+                    st.error(f"Error generating response: {e}")
 
 if __name__ == "__main__":
     main()
