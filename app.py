@@ -20,7 +20,7 @@ from wordcloud import WordCloud
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 import spacy
-from langchain.agents import create_csv_agent
+from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
 from langchain.llms import OpenAI
 
 # Function to initialize the LLM
