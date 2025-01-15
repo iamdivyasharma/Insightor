@@ -20,8 +20,6 @@ from wordcloud import WordCloud
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 import spacy
-from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
-from langchain.llms import OpenAI
 
 # Function to initialize the LLM
 def initialize_llm():
@@ -132,30 +130,11 @@ def remove_redundant_sentences(content):
 
     return ". ".join([sentences[i] for i in unique_sentences])
 
-# CSV Agent functionality
-def create_csv_agent_interface(file):
-    """Creates a CSV agent for analyzing uploaded CSV or Excel files."""
-    if file.name.endswith("csv"):
-        df = pd.read_csv(file)
-    else:
-        df = pd.read_excel(file)
-
-    temp_csv_path = "temp_file.csv"
-    df.to_csv(temp_csv_path, index=False)
-
-    try:
-        agent = create_csv_agent(OpenAI(), temp_csv_path, verbose=True)
-        return agent
-    except Exception as e:
-        st.error(f"Error creating CSV agent: {e}")
-        return None
-
-# Generate analytics report using LLM
 def generate_analytics(documents, llm):
-    st.write("### Analytics Report")
+    st.write("### Advanced Analytics Report")
     prompt_template = """
     Generate a detailed analytics report based on the provided documents. The report should address the following key areas:
-
+    
     1. **Key Trends and Patterns**: Summarize significant trends and recurring patterns in the data.
     2. **Root Cause Analysis**: Identify the underlying reasons for observed trends or anomalies.
     3. **Top Drivers and Detractors**: Highlight factors contributing to positive outcomes and those causing challenges or declines.
@@ -164,25 +143,87 @@ def generate_analytics(documents, llm):
     6. **Unusual Trends or Anomalies**: Detect and explain unexpected findings or deviations in the data.
     7. **Statistical Highlights**: Summarize key numbers, metrics, or statistical findings.
     8. **Actionable Recommendations**: Provide specific, practical recommendations to improve performance, mitigate risks, and leverage opportunities.
-
+    
+    Ensure the report is concise, avoids redundancy, and uses bullet points for clarity.
+    
     Documents:
     {documents}
     """
+
+    # prompt_template = """
+    # Based on the provided documents, generate a comprehensive analytics report addressing the following aspects:
+    # 1. Key Trends and Patterns: Highlight significant trends and patterns observed in the data.
+    # 2. Root Cause Analysis: Identify the underlying reasons for observed trends or anomalies.
+    # 3. Top Drivers and Detractors: Highlight key factors driving performance and those negatively impacting it.
+    # 4. Competitor Analysis: Compare and contrast with top competitors, if applicable.
+    # 5. Quarter/Year Comparisons: Provide insights into changes compared to the previous quarter or year.
+    # 6. Unusual Trends or Anomalies: Detect and explain any unexpected trends or anomalies in the data.
+    # 7. Statistical Highlights: Summarize important statistical findings.
+    # 8. Actionable Recommendations: Provide specific and actionable insights based on the analysis.
+    
+    # Avoid including repetitive content or placeholders. Use bullet points where appropriate for clarity.
+    
+    # Documents:
+    # {documents}
+    # """
+
+    # prompt_template = """
+    # Based on the following documents, generate an advanced analytics report:
+    # 1. Key Trends and Patterns (bullet points)
+    # 2. Statistical Highlights (bullet points)
+    # 3. Actionable Recommendations (bullet points)
+    # Avoid including repetitive content or placeholders.
+    # Documents:
+    # {documents}
+    # """
+    # Concatenate and deduplicate document contents
     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
     filtered_content = remove_redundant_sentences(raw_content)
-    document_text = filtered_content[:3000]  # Limit to 3000 characters
 
-    if not document_text:
+    # Ensure the content is meaningful
+    if not filtered_content.strip():
         st.error("No valid content available for analytics.")
         return
 
+    document_text = filtered_content[:3000]  # Limit to 3000 characters
+
+    # LLM Prompt Preparation
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
     analytics_prompt = prompt.format(documents=document_text)
 
     try:
+        st.write("### Content Summary for Analytics")
+        st.write(f"Content sent to LLM (truncated):\n{document_text[:500]}...")
+
+        # Generate LLM insights
         response = llm(analytics_prompt)
         st.write("### Key Insights")
         st.markdown(response)
+
+        # Enhanced Frequency Analysis
+        st.write("### Frequency Analysis of Key Terms")
+        vectorizer = CountVectorizer(max_features=10, stop_words="english")
+        term_matrix = vectorizer.fit_transform([filtered_content])
+        term_freq = term_matrix.toarray().sum(axis=0)
+        terms = vectorizer.get_feature_names_out()
+
+        # Display as a bar chart
+        term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq}).sort_values(by="Frequency", ascending=False)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="coolwarm")
+        ax.set_title("Top 10 Terms by Frequency")
+        st.pyplot(fig)
+
+        # Statistical Analysis (if numeric data exists)
+        st.write("### Statistical Analysis")
+        numeric_data = pd.DataFrame([doc.page_content for doc in documents if doc.page_content.isnumeric()])
+        if not numeric_data.empty:
+            numeric_data = numeric_data.astype(float)
+            st.write("**Summary Statistics:**")
+            st.write(numeric_data.describe())
+        else:
+            st.info("No numeric data found for statistical analysis.")
+
     except Exception as e:
         st.error(f"Error generating analytics report: {e}")
 
@@ -194,7 +235,10 @@ def generate_summary(documents, llm):
     Documents:
     {documents}
     """
+    # Concatenate document contents
     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
+
+    # Remove redundant sentences
     filtered_content = remove_redundant_sentences(raw_content)
     document_text = filtered_content[:2000]  # Limit length to 2000 characters
 
@@ -206,6 +250,7 @@ def generate_summary(documents, llm):
     summary_prompt = prompt.format(documents=document_text)
 
     try:
+        st.write(f"Content sent to LLM for summarization:\n{document_text}")
         response = llm(summary_prompt)
         st.write(response)
     except Exception as e:
@@ -244,9 +289,10 @@ def main():
     st.write("### Select an Option:")
     option = st.radio(
         "What would you like to do?",
-        ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers", "CSV Agent Analytics")
+        ("None", "Analytics Report", "Summarization", "Recommendations", "Chat with Your Document", "Visualize Tables and Numbers")
     )
 
+    # Step 2: Only proceed if a valid option is selected
     if option == "None":
         st.info("Please select an option to proceed.")
         return
@@ -263,40 +309,27 @@ def main():
         st.warning("Please upload at least one file to continue.")
         return
 
+    # Step 4: Process files only when files are uploaded
     documents = process_files(uploaded_files)
     if not documents:
         st.error("No valid documents were processed.")
         return
     st.write(f"Processed {len(documents)} documents.")
 
-    if option == "CSV Agent Analytics":
-        for file in uploaded_files:
-            if file.name.endswith("csv") or file.name.endswith("xlsx"):
-                agent = create_csv_agent_interface(file)
-                if agent:
-                    user_query = st.text_input(f"Ask a question about {file.name}:")
-                    if user_query:
-                        try:
-                            result = agent.run(user_query)
-                            st.write("Result:", result)
-                        except Exception as e:
-                            st.error(f"Error querying the CSV agent: {e}")
-                else:
-                    st.error("Failed to create CSV agent.")
-            else:
-                st.warning(f"{file.name} is not a CSV or Excel file.")
-
+    # Step 5: Create vector store
     vectorstore = create_vector_store(documents)
     if not vectorstore:
         st.error("Vector store could not be created.")
         return
 
+    # Step 6: Initialize LLM
     try:
         llm = initialize_llm()
     except Exception as e:
         st.error(f"Error initializing LLM: {e}")
         return
 
+    # Step 7: Perform action based on user choice
     if option == "Analytics Report":
         generate_analytics(documents, llm)
     elif option == "Summarization":
