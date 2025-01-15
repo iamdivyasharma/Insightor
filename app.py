@@ -185,7 +185,7 @@ def generate_analytics(documents, llm):
         st.error("No valid content available for analytics.")
         return
 
-    document_text = filtered_content[:3000]  # Limit to 3000 characters
+    document_text = filtered_content[:5000]  # Limit to 3000 characters
 
     # LLM Prompt Preparation
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
