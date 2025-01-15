@@ -133,31 +133,14 @@ def remove_redundant_sentences(content):
 def generate_analytics(documents, llm):
     st.write("### Advanced Analytics Report")
     prompt_template = """
-    Based on the provided documents, generate a comprehensive analytics report addressing the following aspects:
-    1. Key Trends and Patterns: Highlight significant trends and patterns observed in the data.
-    2. Root Cause Analysis: Identify the underlying reasons for observed trends or anomalies.
-    3. Top Drivers and Detractors: Highlight key factors driving performance and those negatively impacting it.
-    4. Competitor Analysis: Compare and contrast with top competitors, if applicable.
-    5. Quarter/Year Comparisons: Provide insights into changes compared to the previous quarter or year.
-    6. Unusual Trends or Anomalies: Detect and explain any unexpected trends or anomalies in the data.
-    7. Statistical Highlights: Summarize important statistical findings.
-    8. Actionable Recommendations: Provide specific and actionable insights based on the analysis.
-    
-    Avoid including repetitive content or placeholders. Use bullet points where appropriate for clarity.
-    
+    Based on the following documents, generate an advanced analytics report:
+    1. Key Trends and Patterns (bullet points)
+    2. Statistical Highlights (bullet points)
+    3. Actionable Recommendations (bullet points)
+    Avoid including repetitive content or placeholders.
     Documents:
     {documents}
     """
-
-    # prompt_template = """
-    # Based on the following documents, generate an advanced analytics report:
-    # 1. Key Trends and Patterns (bullet points)
-    # 2. Statistical Highlights (bullet points)
-    # 3. Actionable Recommendations (bullet points)
-    # Avoid including repetitive content or placeholders.
-    # Documents:
-    # {documents}
-    # """
     # Concatenate and deduplicate document contents
     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
     filtered_content = remove_redundant_sentences(raw_content)
