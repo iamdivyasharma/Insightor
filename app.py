@@ -129,35 +129,19 @@ def remove_redundant_sentences(content):
             unique_sentences.append(i)
 
     return ". ".join([sentences[i] for i in unique_sentences])
-
-# Generate analytics report using LLM
-# def generate_analytics(documents, llm):
-#     st.write("### Analytics Report")
-#     prompt_template = """
-#     Analyze the following documents and generate a detailed analytics report. Include key statistics, trends, and any relevant insights.
-#     Documents:
-#     {documents}
-#     """
-#     document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
-#     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
-#     analytics_prompt = prompt.format(documents=document_text)
-
-#     try:
-#         response = llm(analytics_prompt)
-#         st.write(response)
-#     except Exception as e:
-#         st.error(f"Error generating analytics report: {e}")
 def generate_analytics(documents, llm):
     st.write("### Analytics Report")
     prompt_template = """
-    Analyze the following documents and generate a detailed analytics report. Focus on identifying unique trends, key statistics, and relevant insights while avoiding repetition:
+    Analyze the following documents and generate a detailed analytics report. Highlight unique trends, key statistics, and relevant insights. 
+    Provide results in the following format:
+    1. Key Trends (bullet points)
+    2. Top Statistics (bullet points)
+    3. Insights and Recommendations (bullet points)
     Documents:
     {documents}
     """
-    # Concatenate document contents
+    # Concatenate and deduplicate document contents
     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
-
-    # Remove redundant sentences
     filtered_content = remove_redundant_sentences(raw_content)
     document_text = filtered_content[:2000]  # Limit length to 2000 characters
 
@@ -165,15 +149,66 @@ def generate_analytics(documents, llm):
         st.error("No valid content available for analytics.")
         return
 
+    # Format the LLM prompt
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
     analytics_prompt = prompt.format(documents=document_text)
 
     try:
         st.write(f"Content sent to LLM for analytics:\n{document_text}")
         response = llm(analytics_prompt)
-        st.write(response)
+        st.write("### Key Insights")
+        st.markdown(response)
+
+        # Generate a word cloud visualization
+        st.write("### Word Cloud of Key Terms")
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(filtered_content)
+        st.image(wordcloud.to_array(), use_column_width=True)
+
+        # Display a bar chart of top terms (example visualization)
+        st.write("### Frequency of Top Terms")
+        vectorizer = CountVectorizer(max_features=10, stop_words='english')
+        term_matrix = vectorizer.fit_transform([filtered_content])
+        term_freq = term_matrix.toarray().sum(axis=0)
+        terms = vectorizer.get_feature_names_out()
+
+        term_data = pd.DataFrame({"Term": terms, "Frequency": term_freq})
+        term_data = term_data.sort_values(by="Frequency", ascending=False)
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.barplot(data=term_data, x="Frequency", y="Term", ax=ax, palette="viridis")
+        ax.set_title("Top 10 Terms by Frequency")
+        st.pyplot(fig)
+
     except Exception as e:
         st.error(f"Error generating analytics report: {e}")
+
+# def generate_analytics(documents, llm):
+#     st.write("### Analytics Report")
+#     prompt_template = """
+#     Analyze the following documents and generate a detailed analytics report. Focus on identifying unique trends, key statistics, and relevant insights while avoiding repetition:
+#     Documents:
+#     {documents}
+#     """
+#     # Concatenate document contents
+#     raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
+
+#     # Remove redundant sentences
+#     filtered_content = remove_redundant_sentences(raw_content)
+#     document_text = filtered_content[:2000]  # Limit length to 2000 characters
+
+#     if not document_text:
+#         st.error("No valid content available for analytics.")
+#         return
+
+#     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+#     analytics_prompt = prompt.format(documents=document_text)
+
+#     try:
+#         st.write(f"Content sent to LLM for analytics:\n{document_text}")
+#         response = llm(analytics_prompt)
+#         st.write(response)
+#     except Exception as e:
+#         st.error(f"Error generating analytics report: {e}")
 
 
 # Generate summarization using LLM
