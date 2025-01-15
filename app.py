@@ -290,10 +290,16 @@ def generate_summary(documents, llm):
         st.error(f"Error generating summary: {e}")
 
 # Generate recommendations using LLM
+
 def generate_recommendations(documents, llm):
     st.write("### Recommendations")
     prompt_template = """
-    Based on the content of the following documents, generate actionable recommendations to improve processes or decision-making.
+    Based on the following documents, provide actionable recommendations to improve outcomes. Include:
+    1. Specific strategies to address key challenges.
+    2. Opportunities for leveraging current trends.
+    3. Tailored suggestions for risk mitigation.
+    4. Insights that align with industry best practices.
+    Recommendations should be concise, targeted, and supported by evidence from the document content.
     Documents:
     {documents}
     """
@@ -306,6 +312,22 @@ def generate_recommendations(documents, llm):
         st.write(response)
     except Exception as e:
         st.error(f"Error generating recommendations: {e}")
+# def generate_recommendations(documents, llm):
+#     st.write("### Recommendations")
+#     prompt_template = """
+#     Based on the content of the following documents, generate actionable recommendations to improve processes or decision-making.
+#     Documents:
+#     {documents}
+#     """
+#     document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+#     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+#     recommendations_prompt = prompt.format(documents=document_text)
+
+#     try:
+#         response = llm(recommendations_prompt)
+#         st.write(response)
+#     except Exception as e:
+#         st.error(f"Error generating recommendations: {e}")
 
 # Main Streamlit app
 
