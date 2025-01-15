@@ -131,15 +131,23 @@ def generate_analytics(documents, llm):
 def generate_summary(documents, llm):
     st.write("### Summary")
     prompt_template = """
-    Summarize the following documents concisely, highlighting key points and important details:
+    Summarize the following documents concisely, eliminating repetitive content and focusing on key points:
     Documents:
     {documents}
     """
-    document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+    # Filter and truncate content
+    filtered_content = "\n".join(set(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip()))
+    document_text = filtered_content[:2000]  # Limit length to 2000 characters
+
+    if not document_text:
+        st.error("No valid content available for summarization.")
+        return
+
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
     summary_prompt = prompt.format(documents=document_text)
 
     try:
+        st.write(f"Content sent to LLM for summarization:\n{document_text}")
         response = llm(summary_prompt)
         st.write(response)
     except Exception as e:
