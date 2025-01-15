@@ -9,7 +9,7 @@ faiss-cpu
 pytesseract
 pillow
 lxml
-tqdm
+stqdm
 openpyxl
 camelot-py[cv]
 pdf2image
