@@ -3,6 +3,7 @@ pymupdf
 pdfplumber
 langchain
 langchain_community
+langchain_experimental
 sentence-transformers
 faiss-cpu
 pytesseract
