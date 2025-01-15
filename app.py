@@ -13,6 +13,8 @@ from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
 from langchain.embeddings import HuggingFaceEmbeddings
+from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer
 import os
 from wordcloud import WordCloud
 from sklearn.feature_extraction.text import CountVectorizer
@@ -109,6 +111,25 @@ def create_vector_store(documents):
         st.error(f"Error creating vector store: {e}")
         return None
 
+# Remove redundant sentences using semantic similarity
+def remove_redundant_sentences(content):
+    # Break the content into sentences
+    sentences = content.split(". ")
+    if not sentences:
+        return content
+
+    # Load a pre-trained model for sentence embeddings
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    embeddings = model.encode(sentences)
+
+    # Keep sentences with low redundancy
+    unique_sentences = []
+    for i, sentence in enumerate(sentences):
+        if not any(cosine_similarity([embeddings[i]], [embeddings[j]])[0, 0] > 0.85 for j in range(len(unique_sentences))):
+            unique_sentences.append(i)
+
+    return ". ".join([sentences[i] for i in unique_sentences])
+
 # Generate analytics report using LLM
 def generate_analytics(documents, llm):
     st.write("### Analytics Report")
@@ -135,8 +156,11 @@ def generate_summary(documents, llm):
     Documents:
     {documents}
     """
-    # Filter and truncate content
-    filtered_content = "\n".join(set(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip()))
+    # Concatenate document contents
+    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
+
+    # Remove redundant sentences
+    filtered_content = remove_redundant_sentences(raw_content)
     document_text = filtered_content[:2000]  # Limit length to 2000 characters
 
     if not document_text:
