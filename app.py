@@ -131,22 +131,50 @@ def remove_redundant_sentences(content):
     return ". ".join([sentences[i] for i in unique_sentences])
 
 # Generate analytics report using LLM
+# def generate_analytics(documents, llm):
+#     st.write("### Analytics Report")
+#     prompt_template = """
+#     Analyze the following documents and generate a detailed analytics report. Include key statistics, trends, and any relevant insights.
+#     Documents:
+#     {documents}
+#     """
+#     document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+#     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
+#     analytics_prompt = prompt.format(documents=document_text)
+
+#     try:
+#         response = llm(analytics_prompt)
+#         st.write(response)
+#     except Exception as e:
+#         st.error(f"Error generating analytics report: {e}")
 def generate_analytics(documents, llm):
     st.write("### Analytics Report")
     prompt_template = """
-    Analyze the following documents and generate a detailed analytics report. Include key statistics, trends, and any relevant insights.
+    Analyze the following documents and generate a detailed analytics report. Focus on identifying unique trends, key statistics, and relevant insights while avoiding repetition:
     Documents:
     {documents}
     """
-    document_text = "\n".join(doc.page_content[:1000] for doc in documents[:5])
+    # Concatenate document contents
+    raw_content = "\n".join(doc.page_content.strip() for doc in documents[:5] if doc.page_content.strip())
+
+    # Remove redundant sentences
+    filtered_content = remove_redundant_sentences(raw_content)
+    document_text = filtered_content[:2000]  # Limit length to 2000 characters
+
+    if not document_text:
+        st.error("No valid content available for analytics.")
+        return
+
     prompt = PromptTemplate(template=prompt_template, input_variables=["documents"])
     analytics_prompt = prompt.format(documents=document_text)
 
     try:
+        st.write(f"Content sent to LLM for analytics:\n{document_text}")
         response = llm(analytics_prompt)
         st.write(response)
     except Exception as e:
         st.error(f"Error generating analytics report: {e}")
+
 
 # Generate summarization using LLM
 def generate_summary(documents, llm):
