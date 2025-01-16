@@ -31,8 +31,8 @@ def initialize_llm():
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=512,
-        temperature=0.5
+        max_length=1000,
+        temperature=0.7
     )
 
 # Process PDF using pdfplumber
@@ -400,8 +400,8 @@ def main():
                 st.write(f"**Bot:** {result['result']}")
             except Exception as e:
                 st.error(f"Error generating response: {e}")
-    # elif option == "Visualize Tables and Numbers":
-    #     visualize_tables_and_numbers(documents)
+    elif option == "Visualize Tables and Numbers":
+        visualize_tables_and_numbers(documents)
 
 if __name__ == "__main__":
     main()
