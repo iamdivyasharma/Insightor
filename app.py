@@ -370,7 +370,7 @@ def main():
         return
 
     # Step 7: Perform action based on user choice
-    if option == "Analytics Report":
+    if option == "Analytical Report":
         generate_analytics(documents, llm)
     elif option == "Summarization":
         generate_summary(documents, llm)
