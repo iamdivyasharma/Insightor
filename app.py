@@ -31,8 +31,8 @@ def initialize_llm():
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=1000,
-        temperature=0.7
+        max_length=512,
+        temperature=0.5
     )
 
 # Process PDF using pdfplumber
@@ -370,7 +370,7 @@ def main():
         return
 
     # Step 7: Perform action based on user choice
-    if option == "Analytical Report":
+    if option == "Analytics Report":
         generate_analytics(documents, llm)
     elif option == "Summarization":
         generate_summary(documents, llm)
