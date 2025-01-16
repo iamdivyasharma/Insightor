@@ -400,8 +400,8 @@ def main():
                 st.write(f"**Bot:** {result['result']}")
             except Exception as e:
                 st.error(f"Error generating response: {e}")
-    elif option == "Visualize Tables and Numbers":
-        visualize_tables_and_numbers(documents)
+    # elif option == "Visualize Tables and Numbers":
+    #     visualize_tables_and_numbers(documents)
 
 if __name__ == "__main__":
     main()
