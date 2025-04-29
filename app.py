@@ -52,7 +52,7 @@ os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 #         temperature=0.5
 #     )
 def initialize_llm():
-    REPO_ID = "meta-llama/Llama-3.1-8B-Instruct" 
+    REPO_ID = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
     if not HUGGINGFACE_TOKEN:
