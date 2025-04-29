@@ -60,7 +60,7 @@ def initialize_llm():
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=512,
+        max_length=256,
         temperature=0.5,
         # asyncio_mode="strict"  # Force synchronous behavior
     )
