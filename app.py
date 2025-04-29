@@ -52,8 +52,8 @@ os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 #         temperature=0.5
 #     )
 def initialize_llm():
-    # REPO_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
-    REPO_ID="Zyphra/Zamba2-7B-Instruct-v2"
+    REPO_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+    
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
     if not HUGGINGFACE_TOKEN:
         raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
