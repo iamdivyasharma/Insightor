@@ -132,7 +132,7 @@ def create_vector_store(documents):
         return None
     try:
         st.write("Initializing embeddings model...")
-        embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        # embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         embedding =HuggingFaceEmbeddings( model_name="sentence-transformers/all-MiniLM-L6-v2", model_kwargs={"max_length": 512, "asyncio_mode": True})
 
         st.write("Creating vector store...")
