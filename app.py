@@ -37,7 +37,7 @@ from sklearn.decomposition import LatentDirichletAllocation
 import spacy
 from stqdm import stqdm  # Streamlit wrapper for tqdm
 import os
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
+os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 
 # Function to initialize the LLM
 # def initialize_llm():
