@@ -1,3 +1,15 @@
+import streamlit.watcher.local_sources_watcher as watcher
+
+def safe_extract_paths(module):
+    try:
+        if hasattr(module, '__path__'):
+            return list(module.__path__._path)
+        return []
+    except Exception:
+        return []
+
+watcher.extract_paths = safe_extract_paths
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
