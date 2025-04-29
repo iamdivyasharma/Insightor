@@ -9,7 +9,6 @@ def safe_extract_paths(module):
         return []
 
 watcher.extract_paths = safe_extract_paths
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -56,7 +55,7 @@ def initialize_llm():
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
         max_length=512,
         temperature=0.5,
-        asyncio_mode="strict"  # Ensure sync behavior
+        asyncio_mode="strict"  # Force synchronous behavior
     )
 # Process PDF using pdfplumber
 def process_pdf_with_pdfplumber(pdf_file):
