@@ -19,7 +19,9 @@ import pytesseract
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain.prompts import PromptTemplate
-from langchain.vectorstores import FAISS
+# from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
+
 from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
