@@ -62,7 +62,7 @@ def initialize_llm():
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
         max_length=512,
         temperature=0.5,
-        asyncio_mode="strict"  # Force synchronous behavior
+        # asyncio_mode="strict"  # Force synchronous behavior
     )
 # Process PDF using pdfplumber
 def process_pdf_with_pdfplumber(pdf_file):
