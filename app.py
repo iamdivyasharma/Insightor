@@ -23,7 +23,9 @@ from langchain.vectorstores import FAISS
 from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain_community.llms import HuggingFaceEndpoint
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
+# from langchain.embeddings import HuggingFaceEmbeddings
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import os
