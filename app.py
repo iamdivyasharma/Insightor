@@ -46,7 +46,8 @@ from stqdm import stqdm  # Streamlit wrapper for tqdm
 #         temperature=0.5
 #     )
 def initialize_llm():
-    REPO_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+    # REPO_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+    REPO_ID="mistralai/Mistral-Small-3.1-24B-Instruct-2503"
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
     if not HUGGINGFACE_TOKEN:
         raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
