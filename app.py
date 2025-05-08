@@ -50,18 +50,28 @@ os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 #         max_length=512,
 #         temperature=0.5
 #     )
-def initialize_llm():
-    REPO_ID = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+# def initialize_llm():
+#     REPO_ID = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     
+#     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+#     if not HUGGINGFACE_TOKEN:
+#         raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
+#     return HuggingFaceEndpoint(
+#         repo_id=REPO_ID,
+#         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
+#         max_length=1024,
+#         temperature=0.01,
+#         # asyncio_mode="strict"  # Force synchronous behavior
+#     )
+
+def initialize_llm():
+    REPO_ID = "mistralai/Mistral-7B-Instruct-v0.1"  # Open alternative
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
-    if not HUGGINGFACE_TOKEN:
-        raise ValueError("HUGGINGFACE_TOKEN environment variable is not set.")
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=1024,
-        temperature=0.01,
-        # asyncio_mode="strict"  # Force synchronous behavior
+        max_length=512,
+        temperature=0.5
     )
 # Process PDF using pdfplumber
 def process_pdf_with_pdfplumber(pdf_file):
