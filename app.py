@@ -19,16 +19,14 @@ import pytesseract
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain.prompts import PromptTemplate
-# from langchain.vectorstores import FAISS
 from langchain_community.vectorstores import FAISS
 
 from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
-# from langchain_community.llms import HuggingFaceEndpoint
-# from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint, HuggingFaceEmbeddings
 
-# from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.llms import HuggingFaceEndpoint
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import os
