@@ -59,8 +59,8 @@ def initialize_llm():
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=256,
-        temperature=0.5,
+        max_length=1024,
+        temperature=0.01,
         # asyncio_mode="strict"  # Force synchronous behavior
     )
 # Process PDF using pdfplumber
