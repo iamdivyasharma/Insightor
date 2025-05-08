@@ -38,7 +38,7 @@ from stqdm import stqdm  # Streamlit wrapper for tqdm
 import os
 os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 def initialize_llm():
-    REPO_ID = "mistralai/Mistral-7B-Instruct-v0.1"  # Open alternative
+    REPO_ID = "tiiuae/falcon-7b-instruct"  # Open alternative
     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
     return HuggingFaceEndpoint(
         repo_id=REPO_ID,
