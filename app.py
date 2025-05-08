@@ -37,15 +37,26 @@ import spacy
 from stqdm import stqdm  # Streamlit wrapper for tqdm
 import os
 os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
+# def initialize_llm():
+#     REPO_ID = "tiiuae/falcon-7b-instruct"  # Open alternative
+#     HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+#     return HuggingFaceEndpoint(
+#         repo_id=REPO_ID,
+#         huggingfacehub_api_token=HUGGINGFACE_TOKEN,
+#         max_length=1024,
+#         temperature=0.5
+#     )
+
+
 def initialize_llm():
-    REPO_ID = "tiiuae/falcon-7b-instruct"  # Open alternative
-    HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+    from langchain.llms import HuggingFaceEndpoint
     return HuggingFaceEndpoint(
-        repo_id=REPO_ID,
-        huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-        max_length=1024,
+        repo_id="google/flan-t5-large",
+        huggingfacehub_api_token=os.getenv("HUGGINGFACE_TOKEN"),
+        max_length=512,
         temperature=0.5
     )
+
 # Process PDF using pdfplumber
 def process_pdf_with_pdfplumber(pdf_file):
     all_text = []
