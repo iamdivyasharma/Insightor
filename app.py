@@ -24,8 +24,9 @@ from langchain_community.vectorstores import FAISS
 
 from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
-from langchain_community.llms import HuggingFaceEndpoint
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.llms import HuggingFaceEndpoint
+# from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint, HuggingFaceEmbeddings
 
 # from langchain.embeddings import HuggingFaceEmbeddings
 from sklearn.metrics.pairwise import cosine_similarity
@@ -150,6 +151,7 @@ def remove_redundant_sentences(content):
 
     # Load a pre-trained model for sentence embeddings
     model = SentenceTransformer('all-MiniLM-L6-v2')
+    
     embeddings = model.encode(sentences)
 
     # Keep sentences with low redundancy
