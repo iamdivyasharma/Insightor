@@ -131,7 +131,7 @@ def remove_redundant_sentences(content):
         return content
 
     # Load a pre-trained model for sentence embeddings
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
     
     embeddings = model.encode(sentences)
 
