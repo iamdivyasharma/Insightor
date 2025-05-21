@@ -51,7 +51,7 @@ os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 def initialize_llm():
     from langchain.llms import HuggingFaceEndpoint
     return HuggingFaceEndpoint(
-        repo_id="google/flan-t5-large",
+        repo_id="mistralai/Mixtral-8x22B-Instruct-v0.1",
         huggingfacehub_api_token=os.getenv("HUGGINGFACE_TOKEN"),
         max_length=512,
         temperature=0.5
