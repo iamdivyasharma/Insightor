@@ -51,7 +51,7 @@ os.environ["HUGGINGFACE_TOKEN"] = st.secrets["HUGGINGFACE_TOKEN"]
 def initialize_llm():
     from langchain.llms import HuggingFaceEndpoint
     return HuggingFaceEndpoint(
-        repo_id="repo_id="mistralai/Mistral-7B-Instruct-v0.1",
+        repo_id="mistralai/Mistral-7B-Instruct-v0.1",
         huggingfacehub_api_token=os.getenv("HUGGINGFACE_TOKEN"),
         max_length=512,
         temperature=0.5
